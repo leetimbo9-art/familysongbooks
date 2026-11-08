@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Family Songbooks</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -23,6 +23,12 @@
       background-color: #f0f0f0; 
       border-color: #cccccc; 
     }
+    /* Forces strict chord alignment */
+    .chord-sheet {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      line-height: 1.6;
+      tab-size: 4;
+    }
   </style>
 </head>
 <body class="min-h-screen flex flex-col relative bg-white text-neutral-900">
@@ -30,15 +36,15 @@
   <!-- Main Library View -->
   <div id="libraryPage" class="flex-1 flex flex-col">
     <!-- Header Navigation -->
-    <header class="bg-black text-white px-6 py-4 shadow-sm flex justify-between items-center border-b border-neutral-800">
+    <header class="bg-black text-white px-4 md:px-6 py-4 shadow-sm flex justify-between items-center border-b border-neutral-800">
       <div class="flex items-center space-x-3">
-        <h1 class="text-lg md:text-xl font-bold tracking-tight">Family Songbooks</h1>
+        <h1 class="text-base md:text-xl font-bold tracking-tight">Family Songbooks</h1>
       </div>
-      <div class="flex items-center space-x-3">
-        <button onclick="openAddModal()" class="bg-white text-black hover:bg-neutral-200 px-3.5 py-1.5 rounded-md text-sm font-medium transition cursor-pointer">
+      <div class="flex items-center space-x-2 md:space-x-3">
+        <button onclick="openAddModal()" class="bg-white text-black hover:bg-neutral-200 px-3 py-1.5 rounded-md text-xs md:text-sm font-medium transition cursor-pointer">
           + Add Song
         </button>
-        <button onclick="openModal('settingsModal')" title="Firebase Settings" class="p-2 hover:bg-neutral-800 rounded-full transition text-base cursor-pointer">
+        <button onclick="openModal('settingsModal')" title="Firebase Settings" class="p-2 hover:bg-neutral-800 rounded-full transition text-sm md:text-base cursor-pointer">
           ⚙️
         </button>
       </div>
@@ -48,7 +54,7 @@
     <main class="flex-1 max-w-3xl w-full mx-auto p-4 md:p-6">
       
       <!-- Centered Search Bar -->
-      <div class="w-full my-4">
+      <div class="w-full my-3">
         <input 
           type="text" 
           id="searchInput" 
@@ -58,8 +64,8 @@
         >
       </div>
 
-      <div class="flex justify-between items-center mt-6 mb-4">
-        <h2 class="text-sm font-bold uppercase tracking-wider text-neutral-500">Song Library (A-Z)</h2>
+      <div class="flex justify-between items-center mt-5 mb-3">
+        <h2 class="text-xs md:text-sm font-bold uppercase tracking-wider text-neutral-500">Song Library (A-Z)</h2>
         <div class="flex items-center gap-2">
           <span id="syncStatus" class="inline-block w-2 h-2 rounded-full bg-neutral-400"></span>
           <span id="syncText" class="text-xs text-neutral-500 font-medium">Local Only</span>
@@ -78,8 +84,8 @@
   <!-- Dedicated Full-Screen Reader Page -->
   <div id="readerPage" class="fixed inset-0 bg-white hidden flex-col z-50 overflow-y-auto">
     <!-- Reader Top Bar -->
-    <header class="bg-black text-white px-6 py-4 shadow-sm flex justify-between items-center border-b border-neutral-800 sticky top-0 z-10">
-      <button onclick="closeReader()" class="bg-neutral-800 hover:bg-neutral-700 text-white px-3 py-1.5 rounded-md text-sm font-medium transition cursor-pointer">
+    <header class="bg-black text-white px-4 md:px-6 py-4 shadow-sm flex justify-between items-center border-b border-neutral-800 sticky top-0 z-10">
+      <button onclick="closeReader()" class="bg-neutral-800 hover:bg-neutral-700 text-white px-3 py-1.5 rounded-md text-xs md:text-sm font-medium transition cursor-pointer">
         ← All Songs
       </button>
       
@@ -95,63 +101,63 @@
     </header>
 
     <!-- Full Screen Song Content Area -->
-    <main class="max-w-2xl w-full mx-auto p-6 md:p-10 flex-1 flex flex-col">
-      <div class="bg-neutral-50 p-6 md:p-10 rounded-lg shadow-sm border border-neutral-200 flex-1 flex flex-col">
-        <div class="border-b border-neutral-200 pb-4 mb-6 flex justify-between items-baseline">
+    <main class="max-w-3xl w-full mx-auto p-4 md:p-10 flex-1 flex flex-col">
+      <div class="bg-neutral-50 p-5 md:p-10 rounded-lg shadow-sm border border-neutral-200 flex-1 flex flex-col">
+        <div class="border-b border-neutral-200 pb-4 mb-5 flex justify-between items-baseline">
           <div>
-            <h2 id="viewSongTitle" class="text-2xl md:text-3xl font-bold text-neutral-900 tracking-tight"></h2>
-            <p id="viewSongKey" class="text-sm font-medium text-neutral-500 mt-1"></p>
+            <h2 id="viewSongTitle" class="text-xl md:text-3xl font-bold text-neutral-900 tracking-tight"></h2>
+            <p id="viewSongKey" class="text-xs md:text-sm font-medium text-neutral-500 mt-1"></p>
           </div>
         </div>
 
-        <div class="flex-1 bg-white p-6 rounded-lg border border-neutral-200 shadow-inner">
-          <pre id="viewSongLyrics" class="whitespace-pre-wrap font-mono text-sm md:text-base text-neutral-800 leading-relaxed"></pre>
+        <div class="flex-1 bg-white p-4 md:p-6 rounded-lg border border-neutral-200 shadow-inner overflow-x-auto">
+          <pre id="viewSongLyrics" class="chord-sheet whitespace-pre-wrap text-xs md:text-sm text-neutral-900"></pre>
         </div>
       </div>
     </main>
   </div>
 
   <!-- Add / Edit Song Modal -->
-  <div id="addSongModal" class="fixed inset-0 bg-black/50 backdrop-blur-xs hidden items-center justify-center p-4 z-40">
-    <div class="bg-white w-full max-w-lg rounded-xl shadow-xl p-6 border border-neutral-200 relative max-h-[90vh] overflow-y-auto">
-      <h3 id="modalHeading" class="text-lg font-bold text-neutral-900 mb-4">Add New Song</h3>
+  <div id="addSongModal" class="fixed inset-0 bg-black/50 backdrop-blur-xs hidden items-center justify-center p-2 md:p-4 z-40">
+    <div class="bg-white w-full max-w-lg rounded-xl shadow-xl p-4 md:p-6 border border-neutral-200 relative max-h-[95vh] overflow-y-auto">
+      <h3 id="modalHeading" class="text-lg font-bold text-neutral-900 mb-3">Add New Song</h3>
       
       <!-- AI Image Scanner Box -->
       <div class="mb-4 p-3 bg-neutral-100 rounded-lg border border-neutral-300 text-xs">
         <label class="block font-semibold text-neutral-800 mb-1">✨ AI Scan Sheet Music / Photo</label>
-        <input type="file" id="imageInput" accept="image/*" onchange="handleImageUpload(event)" class="w-full text-xs text-neutral-600 file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-black file:text-white hover:file:bg-neutral-800 cursor-pointer">
-        <p id="ocrStatus" class="mt-1 text-neutral-500 italic">Upload a photo of a lyric sheet or song book page to auto-fill text.</p>
+        <input type="file" id="imageInput" accept="image/*" onchange="handleImageUpload(event)" class="w-full text-xs text-neutral-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-black file:text-white hover:file:bg-neutral-800 cursor-pointer">
+        <p id="ocrStatus" class="mt-1 text-neutral-500 italic">Upload a photo of a lyric sheet to auto-fill text.</p>
       </div>
 
-      <div class="space-y-4 text-sm">
+      <div class="space-y-3 text-sm">
         <input type="hidden" id="editingSongId">
         <div>
           <label class="block font-medium text-neutral-700 mb-1">Song Title</label>
-          <input type="text" id="songTitle" class="w-full px-3 py-2 border border-neutral-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-black" placeholder="Amazing Grace">
+          <input type="text" id="songTitle" class="w-full px-3 py-2 border border-neutral-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-black" placeholder="Amazing Grace">
         </div>
         <div>
           <label class="block font-medium text-neutral-700 mb-1">Key / Artist</label>
-          <input type="text" id="songKey" class="w-full px-3 py-2 border border-neutral-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-black" placeholder="Key of G / Traditional">
+          <input type="text" id="songKey" class="w-full px-3 py-2 border border-neutral-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-black" placeholder="Key of G / Traditional">
         </div>
         <div>
           <label class="block font-medium text-neutral-700 mb-1">Chords & Lyrics</label>
-          <textarea id="songLyrics" rows="7" class="w-full px-3 py-2 border border-neutral-300 rounded-lg bg-white font-mono text-xs focus:outline-none focus:ring-2 focus:ring-black" placeholder="[G] Amazing grace, how [C] sweet the [G] sound..."></textarea>
+          <textarea id="songLyrics" rows="8" class="w-full px-3 py-2 border border-neutral-300 rounded-lg bg-white chord-sheet text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-black" placeholder="[G] Amazing grace, how [C] sweet the [G] sound..."></textarea>
         </div>
       </div>
-      <div class="mt-6 flex justify-end gap-3 text-sm">
-        <button onclick="closeModal('addSongModal')" class="px-4 py-2 border border-neutral-300 rounded-lg text-neutral-700 hover:bg-neutral-100 cursor-pointer font-medium">Cancel</button>
-        <button onclick="saveSong()" class="px-4 py-2 bg-black text-white rounded-lg hover:bg-neutral-800 cursor-pointer font-medium">Save Song</button>
+      <div class="mt-5 flex justify-end gap-2 text-sm">
+        <button onclick="closeModal('addSongModal')" class="px-4 py-2 border border-neutral-300 rounded-lg text-neutral-700 hover:bg-neutral-100 cursor-pointer font-medium text-xs md:text-sm">Cancel</button>
+        <button onclick="saveSong()" class="px-4 py-2 bg-black text-white rounded-lg hover:bg-neutral-800 cursor-pointer font-medium text-xs md:text-sm">Save Song</button>
       </div>
     </div>
   </div>
 
   <!-- Firebase Settings Modal -->
-  <div id="settingsModal" class="fixed inset-0 bg-black/50 backdrop-blur-xs hidden items-center justify-center p-4 z-50">
-    <div class="bg-white w-full max-w-md rounded-xl shadow-xl p-6 border border-neutral-200 relative">
+  <div id="settingsModal" class="fixed inset-0 bg-black/50 backdrop-blur-xs hidden items-center justify-center p-2 md:p-4 z-50">
+    <div class="bg-white w-full max-w-md rounded-xl shadow-xl p-4 md:p-6 border border-neutral-200 relative max-h-[95vh] overflow-y-auto">
       <h3 class="text-lg font-bold text-neutral-900 mb-1">Firebase Cloud Setup</h3>
-      <p class="text-xs text-neutral-500 mb-4">Paste your free Firebase web keys below to sync songs across devices.</p>
+      <p class="text-xs text-neutral-500 mb-3">Paste your free Firebase web keys below to sync songs across devices.</p>
       
-      <div class="space-y-2.5 text-xs">
+      <div class="space-y-2 text-xs">
         <div>
           <label class="block font-medium text-neutral-700 mb-0.5">apiKey</label>
           <input type="text" id="apiKey" class="w-full px-2.5 py-1.5 border border-neutral-300 rounded bg-white font-mono">
@@ -178,9 +184,9 @@
         </div>
       </div>
 
-      <div class="mt-6 flex justify-end gap-3 text-sm">
-        <button onclick="closeModal('settingsModal')" class="px-4 py-2 border border-neutral-300 rounded-lg text-neutral-700 hover:bg-neutral-100 cursor-pointer font-medium">Cancel</button>
-        <button onclick="saveConfig()" class="px-4 py-2 bg-black text-white rounded-lg hover:bg-neutral-800 cursor-pointer font-medium">Save Configuration</button>
+      <div class="mt-5 flex justify-end gap-2 text-sm">
+        <button onclick="closeModal('settingsModal')" class="px-4 py-2 border border-neutral-300 rounded-lg text-neutral-700 hover:bg-neutral-100 cursor-pointer font-medium text-xs md:text-sm">Cancel</button>
+        <button onclick="saveConfig()" class="px-4 py-2 bg-black text-white rounded-lg hover:bg-neutral-800 cursor-pointer font-medium text-xs md:text-sm">Save Configuration</button>
       </div>
     </div>
   </div>
@@ -213,22 +219,21 @@
       document.getElementById('songKey').value = "";
       document.getElementById('songLyrics').value = "";
       document.getElementById('imageInput').value = "";
-      document.getElementById('ocrStatus').innerText = "Upload a photo of a lyric sheet or song book page to auto-fill text.";
+      document.getElementById('ocrStatus').innerText = "Upload a photo of a lyric sheet to auto-fill text.";
       openModal('addSongModal');
     }
 
-    // AI Image OCR Handler
     async function handleImageUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
 
       const statusEl = document.getElementById('ocrStatus');
-      statusEl.innerText = "⏳ AI is scanning the image for lyrics and chords...";
+      statusEl.innerText = "⏳ AI is scanning image...";
 
       try {
         const { data: { text } } = await Tesseract.recognize(file, 'eng');
         document.getElementById('songLyrics').value = text.trim();
-        statusEl.innerText = "✨ Scan complete! Text extracted successfully into lyrics box.";
+        statusEl.innerText = "✨ Scan complete! Text extracted successfully.";
       } catch (err) {
         console.error("OCR Error:", err);
         statusEl.innerText = "❌ Error reading image. Please type lyrics manually.";
@@ -282,12 +287,12 @@
       }
 
       container.innerHTML = songsToRender.map(s => `
-        <div onclick="openReader('${s.id}')" class="song-card px-5 py-3.5 rounded-lg cursor-pointer flex justify-between items-center group">
-          <div class="flex items-center gap-4">
-            <span class="text-xs font-mono font-semibold text-neutral-500 w-16 uppercase">${s.key || 'Key'}</span>
-            <h3 class="font-semibold text-base text-neutral-900 group-hover:text-black transition">${s.title}</h3>
+        <div onclick="openReader('${s.id}')" class="song-card px-4 md:px-5 py-3.5 rounded-lg cursor-pointer flex justify-between items-center group">
+          <div class="flex items-center gap-3 md:gap-4 overflow-hidden">
+            <span class="text-xs font-mono font-semibold text-neutral-500 w-12 md:w-16 uppercase shrink-0">${s.key || 'Key'}</span>
+            <h3 class="font-semibold text-sm md:text-base text-neutral-900 group-hover:text-black transition truncate">${s.title}</h3>
           </div>
-          <span class="text-xs text-neutral-400 group-hover:text-neutral-700 font-medium">View →</span>
+          <span class="text-xs text-neutral-400 group-hover:text-neutral-700 font-medium shrink-0 ml-2">View →</span>
         </div>
       `).join('');
     }
@@ -332,7 +337,7 @@
       document.getElementById('songKey').value = song.key || '';
       document.getElementById('songLyrics').value = song.lyrics || '';
       document.getElementById('imageInput').value = "";
-      document.getElementById('ocrStatus').innerText = "Upload a photo of a lyric sheet or song book page to auto-fill text.";
+      document.getElementById('ocrStatus').innerText = "Upload a photo of a lyric sheet to auto-fill text.";
       
       openModal('addSongModal');
     }
@@ -397,7 +402,7 @@
             const active = songs.find(s => s.id === currentViewingSongId);
             if (active) {
               document.getElementById('viewSongTitle').innerText = active.title;
-              document.getElementById('viewSongKey').innerText = active.key ? `Key of ${active.key}` : 'Standard Key';
+              document.getElementById('viewSongKey').innerText = active.key ? `Key of active.key` : 'Standard Key';
               document.getElementById('viewSongLyrics').innerText = active.lyrics || '';
             }
           }
@@ -405,7 +410,6 @@
       });
     }
 
-    // Load saved settings if present
     const savedCfg = JSON.parse(localStorage.getItem('fs_firebase_cfg') || '{}');
     ['apiKey','authDomain','projectId','storageBucket','messagingSenderId','appId'].forEach(k => {
       if (savedCfg[k] && document.getElementById(k)) {
