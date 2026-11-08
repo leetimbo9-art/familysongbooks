@@ -25,7 +25,7 @@
         <h1 class="text-xl md:text-2xl font-bold tracking-wide">Family Songbooks</h1>
       </div>
       <div class="flex items-center space-x-3">
-        <button onclick="openModal('addSongModal')" class="bg-[#8c6747] hover:bg-[#a37954] text-white px-3 py-1.5 rounded text-sm font-sans flex items-center gap-1 transition">
+        <button onclick="openAddModal()" class="bg-[#8c6747] hover:bg-[#a37954] text-white px-3 py-1.5 rounded text-sm font-sans flex items-center gap-1 transition">
           <span>+</span> Add Song
         </button>
         <button onclick="openModal('settingsModal')" title="Firebase Settings" class="p-2 hover:bg-[#523a2e] rounded-full transition text-lg">
@@ -69,24 +69,33 @@
     </main>
   </div>
 
-  <!-- Dedicated Full-Screen Reader View Page -->
+  <!-- Dedicated Full-Screen Songbase Reader Page -->
   <div id="readerPage" class="fixed inset-0 bg-[#fcf8f2] hidden flex-col z-50 overflow-y-auto">
     <!-- Reader Top Bar -->
     <header class="bg-[#3c2a21] text-[#f5efe6] px-6 py-4 shadow-md flex justify-between items-center border-b-4 border-[#8c6747] sticky top-0 z-10">
       <button onclick="closeReader()" class="bg-[#8c6747] hover:bg-[#a37954] text-white px-3 py-1.5 rounded text-sm font-sans flex items-center gap-2 transition">
-        <span>←</span> Back to Songs
+        <span>←</span> All Songs
       </button>
-      <button onclick="deleteCurrentSong()" class="text-red-300 hover:text-red-100 font-sans text-xs font-semibold">
-        Delete Song
-      </button>
+      
+      <!-- Small Edit & Delete Action Buttons -->
+      <div class="flex items-center gap-2 font-sans">
+        <button onclick="openEditSong()" class="text-xs bg-[#523a2e] hover:bg-[#684b3e] text-amber-100 px-2.5 py-1 rounded transition border border-amber-900/30">
+          Edit
+        </button>
+        <button onclick="deleteCurrentSong()" class="text-xs bg-red-950/40 hover:bg-red-900/65 text-red-200 px-2.5 py-1 rounded transition border border-red-900/30">
+          Delete
+        </button>
+      </div>
     </header>
 
     <!-- Full Screen Song Content Area -->
     <main class="max-w-3xl w-full mx-auto p-6 md:p-10 flex-1 flex flex-col">
       <div class="parchment p-6 md:p-10 rounded-lg shadow-md border border-[#e2d5c3] flex-1 flex flex-col">
-        <div class="border-b border-[#e2d5c3] pb-4 mb-6">
-          <h2 id="viewSongTitle" class="text-3xl md:text-4xl font-bold text-[#3c2a21]"></h2>
-          <p id="viewSongKey" class="text-base font-sans text-[#8c6747] font-semibold mt-2"></p>
+        <div class="border-b border-[#e2d5c3] pb-4 mb-6 flex justify-between items-baseline">
+          <div>
+            <h2 id="viewSongTitle" class="text-3xl md:text-4xl font-bold text-[#3c2a21]"></h2>
+            <p id="viewSongKey" class="text-base font-sans text-[#8c6747] font-semibold mt-2"></p>
+          </div>
         </div>
 
         <div class="flex-1 bg-white/80 p-6 rounded-lg border border-amber-900/10">
@@ -96,11 +105,12 @@
     </main>
   </div>
 
-  <!-- Add Song Modal -->
+  <!-- Add / Edit Song Modal -->
   <div id="addSongModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center p-4 z-40">
     <div class="parchment w-full max-w-lg rounded-lg shadow-xl p-6 relative">
-      <h3 class="text-xl font-bold text-[#3c2a21] mb-4">Add New Song</h3>
+      <h3 id="modalHeading" class="text-xl font-bold text-[#3c2a21] mb-4">Add New Song</h3>
       <div class="space-y-4 font-sans text-sm">
+        <input type="hidden" id="editingSongId">
         <div>
           <label class="block font-semibold mb-1">Song Title</label>
           <input type="text" id="songTitle" class="w-full p-2 border border-amber-900/20 rounded bg-white" placeholder="Amazing Grace">
@@ -176,6 +186,15 @@
       const el = document.getElementById(id);
       el.classList.add('hidden');
       el.classList.remove('flex');
+    }
+
+    function openAddModal() {
+      document.getElementById('modalHeading').innerText = "Add New Song";
+      document.getElementById('editingSongId').value = "";
+      document.getElementById('songTitle').value = "";
+      document.getElementById('songKey').value = "";
+      document.getElementById('songLyrics').value = "";
+      openModal('addSongModal');
     }
 
     function initFirebase() {
@@ -257,8 +276,21 @@
       currentViewingSongId = null;
     }
 
+    function openEditSong() {
+      const song = songs.find(s => s.id === currentViewingSongId);
+      if (!song) return;
+      
+      document.getElementById('modalHeading').innerText = "Edit Song";
+      document.getElementById('editingSongId').value = song.id;
+      document.getElementById('songTitle').value = song.title;
+      document.getElementById('songKey').value = song.key || '';
+      document.getElementById('songLyrics').value = song.lyrics || '';
+      
+      openModal('addSongModal');
+    }
+
     function deleteCurrentSong() {
-      if (!currentViewingSongId || !confirm("Are you sure you want to delete this song?")) return;
+      if (!currentViewingSongId || !confirm("Delete this song?")) return;
       
       songs = songs.filter(s => s.id !== currentViewingSongId);
       localStorage.setItem('fs_songs', JSON.stringify(songs));
@@ -272,48 +304,27 @@
     }
 
     function saveSong() {
-      const title = document.getElementById('songTitle').value;
-      const key = document.getElementById('songKey').value;
+      const editingId = document.getElementById('editingSongId').value;
+      const title = document.getElementById('songTitle').value.trim();
+      const key = document.getElementById('songKey').value.trim();
       const lyrics = document.getElementById('songLyrics').value;
       if (!title) return alert('Please enter a title');
 
-      const newSong = { title, key, lyrics, id: Date.now().toString() };
-      songs.push(newSong);
+      let songId = editingId ? editingId : Date.now().toString();
+      const songData = { title, key, lyrics, id: songId };
+
+      if (editingId) {
+        const index = songs.findIndex(s => s.id === editingId);
+        if (index !== -1) songs[index] = songData;
+      } else {
+        songs.push(songData);
+      }
+
       localStorage.setItem('fs_songs', JSON.stringify(songs));
 
       if (db) {
-        db.collection('songs').doc(newSong.id).set(newSong);
+        db.collection('songs').doc(songId).set(songData);
       }
 
-      renderSongs();
       closeModal('addSongModal');
-      document.getElementById('songTitle').value = '';
-      document.getElementById('songKey').value = '';
-      document.getElementById('songLyrics').value = '';
-    }
-
-    function loadCloudSongs() {
-      if (!db) return;
-      db.collection('songs').onSnapshot(snap => {
-        const cloudSongs = [];
-        snap.forEach(doc => cloudSongs.push(doc.data()));
-        if (cloudSongs.length) {
-          songs = cloudSongs;
-          renderSongs();
-        }
-      });
-    }
-
-    // Load saved settings if present
-    const savedCfg = JSON.parse(localStorage.getItem('fs_firebase_cfg') || '{}');
-    ['apiKey','authDomain','projectId','storageBucket','messagingSenderId','appId'].forEach(k => {
-      if (savedCfg[k] && document.getElementById(k)) {
-        document.getElementById(k).value = savedCfg[k];
-      }
-    });
-
-    renderSongs();
-    initFirebase();
-  </script>
-</body>
-</html>
+      renderSongs();
