@@ -83,8 +83,14 @@
         ← All Songs
       </button>
       
-      <!-- Edit & Delete Action Buttons -->
+      <!-- Transpose & Edit Action Controls -->
       <div class="flex items-center gap-2">
+        <div class="flex items-center bg-neutral-800 rounded-md border border-neutral-700 p-0.5 text-xs text-white">
+          <span class="px-1.5 text-neutral-400 font-medium hidden sm:inline">Key:</span>
+          <button onclick="transposeSong(-1)" class="px-2 py-1 hover:bg-neutral-700 rounded font-bold cursor-pointer">♭</button>
+          <span id="transposeOffset" class="px-1 font-mono text-blue-400 font-semibold">0</span>
+          <button onclick="transposeSong(1)" class="px-2 py-1 hover:bg-neutral-700 rounded font-bold cursor-pointer">♯</button>
+        </div>
         <button onclick="openEditSong()" class="text-xs bg-neutral-800 hover:bg-neutral-700 text-white px-3 py-1.5 rounded-md transition border border-neutral-700 cursor-pointer font-medium">
           Edit
         </button>
@@ -190,6 +196,22 @@
     let db = null;
     let songs = JSON.parse(localStorage.getItem('fs_songs') || '[]');
     let currentViewingSongId = null;
+    let currentTransposeStep = 0;
+
+    const CHROMATIC_SCALE = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const FLAT_SCALE = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+
+    function transposeChord(chord, steps) {
+      if (!chord || steps === 0) return chord;
+      return chord.replace(/[A-G][#b]?/g, (match) => {
+        let index = CHROMATIC_SCALE.indexOf(match);
+        if (index === -1) index = FLAT_SCALE.indexOf(match);
+        if (index === -1) return match;
+        let newIndex = (index + steps) % 12;
+        if (newIndex < 0) newIndex += 12;
+        return CHROMATIC_SCALE[newIndex];
+      });
+    }
 
     function openModal(id) {
       const el = document.getElementById(id);
@@ -301,8 +323,7 @@
       renderSongs(filtered);
     }
 
-    // Songbase ChordPro Parser: Converts [Chord]Word into clean inline-block blue stacked elements
-    function parseChordPro(rawText) {
+    function parseChordPro(rawText, transposeSteps = 0) {
       if (!rawText) return '';
       const lines = rawText.split('\n');
       return lines.map(line => {
@@ -316,7 +337,7 @@
           for (let i = 0; i < parts.length; i++) {
             let part = parts[i];
             if (part.startsWith('[') && part.endsWith(']')) {
-              currentChord = part.slice(1, -1);
+              currentChord = transposeChord(part.slice(1, -1), transposeSteps);
             } else if (part) {
               html += `<div class="flex flex-col items-start">
                 <span class="text-blue-600 font-bold text-xs h-4 leading-none">${currentChord}</span>
@@ -339,13 +360,24 @@
       }).join('');
     }
 
+    function transposeSong(delta) {
+      currentTransposeStep += delta;
+      document.getElementById('transposeOffset').innerText = (currentTransposeStep > 0 ? '+' : '') + currentTransposeStep;
+      const song = songs.find(s => s.id === currentViewingSongId);
+      if (song) {
+        document.getElementById('viewSongLyrics').innerHTML = parseChordPro(song.lyrics || '', currentTransposeStep);
+      }
+    }
+
     function openReader(id) {
       const song = songs.find(s => s.id === id);
       if (!song) return;
       currentViewingSongId = id;
+      currentTransposeStep = 0;
+      document.getElementById('transposeOffset').innerText = '0';
       document.getElementById('viewSongTitle').innerText = song.title;
       document.getElementById('viewSongKey').innerText = song.key ? `Key of ${song.key}` : 'Standard Key';
-      document.getElementById('viewSongLyrics').innerHTML = parseChordPro(song.lyrics || 'No lyrics added yet.');
+      document.getElementById('viewSongLyrics').innerHTML = parseChordPro(song.lyrics || 'No lyrics added yet.', 0);
       
       const reader = document.getElementById('readerPage');
       reader.classList.remove('hidden');
@@ -419,7 +451,7 @@
       if (currentViewingSongId === songId) {
         document.getElementById('viewSongTitle').innerText = title;
         document.getElementById('viewSongKey').innerText = key ? `Key of ${key}` : 'Standard Key';
-        document.getElementById('viewSongLyrics').innerHTML = parseChordPro(lyrics || 'No lyrics added yet.');
+        document.getElementById('viewSongLyrics').innerHTML = parseChordPro(lyrics || 'No lyrics added yet.', currentTransposeStep);
       }
     }
 
@@ -436,7 +468,7 @@
             if (active) {
               document.getElementById('viewSongTitle').innerText = active.title;
               document.getElementById('viewSongKey').innerText = active.key ? `Key of ${active.key}` : 'Standard Key';
-              document.getElementById('viewSongLyrics').innerHTML = parseChordPro(active.lyrics || '');
+              document.getElementById('viewSongLyrics').innerHTML = parseChordPro(active.lyrics || '', currentTransposeStep);
             }
           }
         }
