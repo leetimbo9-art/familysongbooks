@@ -37,7 +37,7 @@
     <!-- Main Content Area -->
     <main class="flex-1 max-w-4xl w-full mx-auto p-4 md:p-6">
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-        <h2 class="text-xl font-semibold text-[#3c2a21]">Song Archive</h2>
+        <h2 class="text-xl font-semibold text-[#3c2a21]">Song Archive (A-Z)</h2>
         
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
           <!-- Search Input Field -->
@@ -60,9 +60,9 @@
         </div>
       </div>
       
-      <!-- Song Cards Grid -->
-      <div id="songList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="parchment p-6 rounded-lg text-center text-gray-600 col-span-full">
+      <!-- Songbase Alphabetical List Container -->
+      <div id="songList" class="space-y-2">
+        <div class="parchment p-6 rounded-lg text-center text-gray-600">
           No songs added yet. Click "+ Add Song" to begin archiving!
         </div>
       </div>
@@ -232,21 +232,28 @@
       initFirebase();
     }
 
+    function sortSongsAlphabetically(list) {
+      return list.sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'accent', numeric: true }));
+    }
+
     function renderSongs(songsToRender = songs) {
       const container = document.getElementById('songList');
       if (!container) return;
+      
+      sortSongsAlphabetically(songsToRender);
+
       if (!songsToRender.length) {
-        container.innerHTML = `<div class="parchment p-6 rounded-lg text-center text-gray-600 col-span-full">No songs found.</div>`;
+        container.innerHTML = `<div class="parchment p-6 rounded-lg text-center text-gray-600">No songs found.</div>`;
         return;
       }
+
       container.innerHTML = songsToRender.map(s => `
-        <div onclick="openReader('${s.id}')" class="parchment p-5 rounded-lg shadow-sm border border-[#e2d5c3] cursor-pointer hover:shadow-md hover:border-[#8c6747] transition group">
-          <div class="flex justify-between items-start">
-            <h3 class="font-bold text-lg text-[#3c2a21] group-hover:text-[#8c6747] transition">${s.title}</h3>
-            <span class="text-xs font-sans text-gray-400 group-hover:text-gray-600">Read →</span>
+        <div onclick="openReader('${s.id}')" class="parchment px-5 py-3 rounded-lg shadow-sm border border-[#e2d5c3] cursor-pointer hover:bg-[#eae2d5] transition flex justify-between items-center group">
+          <div class="flex items-center gap-4">
+            <span class="text-sm font-bold text-[#8c6747] w-16">${s.key || 'Key'}</span>
+            <h3 class="font-bold text-base md:text-lg text-[#3c2a21] group-hover:text-[#8c6747] transition">${s.title}</h3>
           </div>
-          <p class="text-xs font-sans text-[#8c6747] mt-1 mb-3">${s.key || 'Standard Key'}</p>
-          <pre class="whitespace-pre-wrap font-mono text-xs bg-white/60 p-3 rounded border border-amber-900/10 text-gray-800 line-clamp-3">${s.lyrics || ''}</pre>
+          <span class="text-xs font-sans text-gray-400 group-hover:text-gray-600">View →</span>
         </div>
       `).join('');
     }
@@ -265,7 +272,7 @@
       if (!song) return;
       currentViewingSongId = id;
       document.getElementById('viewSongTitle').innerText = song.title;
-      document.getElementById('viewSongKey').innerText = song.key || 'Standard Key';
+      document.getElementById('viewSongKey').innerText = song.key ? `Key of ${song.key}` : 'Standard Key';
       document.getElementById('viewSongLyrics').innerText = song.lyrics || 'No lyrics added yet.';
       
       const reader = document.getElementById('readerPage');
@@ -325,6 +332,7 @@
         songs.push(songData);
       }
 
+      sortSongsAlphabetically(songs);
       localStorage.setItem('fs_songs', JSON.stringify(songs));
 
       if (db) {
@@ -336,7 +344,7 @@
 
       if (currentViewingSongId === songId) {
         document.getElementById('viewSongTitle').innerText = title;
-        document.getElementById('viewSongKey').innerText = key || 'Standard Key';
+        document.getElementById('viewSongKey').innerText = key ? `Key of ${key}` : 'Standard Key';
         document.getElementById('viewSongLyrics').innerText = lyrics || 'No lyrics added yet.';
       }
     }
@@ -353,7 +361,7 @@
             const active = songs.find(s => s.id === currentViewingSongId);
             if (active) {
               document.getElementById('viewSongTitle').innerText = active.title;
-              document.getElementById('viewSongKey').innerText = active.key || 'Standard Key';
+              document.getElementById('viewSongKey').innerText = active.key ? `Key of ${active.key}` : 'Standard Key';
               document.getElementById('viewSongLyrics').innerText = active.lyrics || '';
             }
           }
