@@ -245,14 +245,19 @@
       if (!file) return;
 
       const statusEl = document.getElementById('ocrStatus');
-      statusEl.innerText = "⏳ AI is scanning and formatting chords...";
+      statusEl.innerText = "⏳ Initializing AI scanner worker...";
 
       try {
-        const { data: { text } } = await Tesseract.recognize(file, 'eng');
+        const worker = await Tesseract.createWorker('eng');
+        statusEl.innerText = "⏳ AI is scanning image...";
+        const ret = await worker.recognize(file);
+        await worker.terminate();
+
+        const text = ret.data.text;
         
         let cleanedLines = text.split('\n')
           .map(line => line.trim())
-          .filter(line => line.length > 0 && !/^[^a-zA-Z0-9()\[\]]+$/.test(line));
+          .filter(line => line.length > 0);
 
         let formattedText = cleanedLines.map(line => {
           const chordPattern = /\b([A-G][#b]?[m7maj9susdim]*(\/[A-G][#b]?)?)\b/g;
@@ -269,8 +274,8 @@
         document.getElementById('songLyrics').value = formattedText;
         statusEl.innerText = "✨ Scan complete! Chords formatted to (G) style.";
       } catch (err) {
-        console.error("OCR Error:", err);
-        statusEl.innerText = "❌ Error reading image. Please type lyrics manually.";
+        console.error("OCR Worker Error:", err);
+        statusEl.innerText = "❌ Scan failed. Please type or paste lyrics manually.";
       }
     }
 
@@ -397,4 +402,57 @@
       currentTransposeStep = 0;
       document.getElementById('transposeOffset').innerText = '0';
       document.getElementById('viewSongTitle').innerText = song.title;
-      document.getElementById('viewSongKey').innerText = song.key ?
+      document.getElementById('viewSongKey').innerText = song.key ? `Key of ${song.key}` : 'Standard Key';
+      document.getElementById('viewSongLyrics').innerHTML = parseChordPro(song.lyrics || 'No lyrics added yet.', 0);
+      
+      const reader = document.getElementById('readerPage');
+      reader.classList.remove('hidden');
+      reader.classList.add('flex');
+      window.scrollTo(0, 0);
+    }
+
+    function closeReader() {
+      const reader = document.getElementById('readerPage');
+      reader.classList.add('hidden');
+      reader.classList.remove('flex');
+      currentViewingSongId = null;
+    }
+
+    function openEditSong() {
+      const song = songs.find(s => s.id === currentViewingSongId);
+      if (!song) return;
+      
+      document.getElementById('modalHeading').innerText = "Edit Song";
+      document.getElementById('editingSongId').value = song.id;
+      document.getElementById('songTitle').value = song.title;
+      document.getElementById('songKey').value = song.key || '';
+      document.getElementById('songLyrics').value = song.lyrics || '';
+      document.getElementById('imageInput').value = "";
+      document.getElementById('ocrStatus').innerText = "Upload a photo of a lyric sheet to auto-fill text.";
+      
+      openModal('addSongModal');
+    }
+
+    function deleteCurrentSong() {
+      if (!currentViewingSongId || !confirm("Delete this song?")) return;
+      
+      songs = songs.filter(s => s.id !== currentViewingSongId);
+      localStorage.setItem('fs_songs', JSON.stringify(songs));
+
+      if (db) {
+        db.collection('songs').doc(currentViewingSongId).delete();
+      }
+
+      closeReader();
+      renderSongs();
+    }
+
+    function saveSong() {
+      const editingId = document.getElementById('editingSongId').value;
+      const title = document.getElementById('songTitle').value.trim();
+      const key = document.getElementById('songKey').value.trim();
+      const lyrics = document.getElementById('songLyrics').value;
+      if (!title) return alert('Please enter a title');
+
+      let songId = editingId ? editingId : Date.now().toString();
+      const songData =
