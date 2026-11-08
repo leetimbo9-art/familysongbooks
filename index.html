@@ -1,39 +1,400 @@
-async function handleImageUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Family Songbooks</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <style>
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+      background-color: #ffffff; 
+      color: #111111; 
+    }
+    .song-card { 
+      background-color: #fafafa; 
+      border: 1px solid #e5e5e5; 
+      transition: all 0.15s ease;
+    }
+    .song-card:hover { 
+      background-color: #f0f0f0; 
+      border-color: #cccccc; 
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col relative bg-white text-neutral-900">
 
-  const statusEl = document.getElementById('ocrStatus');
-  statusEl.innerText = "⏳ AI is scanning and formatting chords...";
+  <!-- Main Library View -->
+  <div id="libraryPage" class="flex-1 flex flex-col">
+    <!-- Header Navigation -->
+    <header class="bg-black text-white px-4 md:px-6 py-4 shadow-sm flex justify-between items-center border-b border-neutral-800">
+      <div class="flex items-center space-x-3">
+        <h1 class="text-base md:text-xl font-bold tracking-tight">Family Songbooks</h1>
+      </div>
+      <div class="flex items-center space-x-2 md:space-x-3">
+        <button onclick="openAddModal()" class="bg-white text-black hover:bg-neutral-200 px-3 py-1.5 rounded-md text-xs md:text-sm font-medium transition cursor-pointer">
+          + Add Song
+        </button>
+        <button onclick="openModal('settingsModal')" title="Firebase Settings" class="p-2 hover:bg-neutral-800 rounded-full transition text-sm md:text-base cursor-pointer">
+          ⚙️
+        </button>
+      </div>
+    </header>
 
-  try {
-    const { data: { text } } = await Tesseract.recognize(file, 'eng');
-    
-    // Clean up OCR noise/garbage lines
-    let cleanedLines = text.split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 0 && !/^[^a-zA-Z0-9()\[\]]+$/.test(line));
-
-    // Process scanned text to wrap standalone chords in (Chord) format
-    let formattedText = cleanedLines.map(line => {
-      // Regex matching standalone chords like G, C, D7, Am, F#, Bb/F
-      const chordPattern = /\b([A-G][#b]?[m7maj9susdim]*(\/[A-G][#b]?)?)\b/g;
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-3xl w-full mx-auto p-4 md:p-6">
       
-      // If line contains mostly chords, wrap each chord in parentheses
-      const words = line.split(/\s+/);
-      const chordMatches = line.match(chordPattern) || [];
+      <!-- Centered Search Bar -->
+      <div class="w-full my-3">
+        <input 
+          type="text" 
+          id="searchInput" 
+          oninput="handleSearch()" 
+          placeholder="Search songs by title or key..." 
+          class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg bg-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-black"
+        >
+      </div>
+
+      <div class="flex justify-between items-center mt-5 mb-3">
+        <h2 class="text-xs md:text-sm font-bold uppercase tracking-wider text-neutral-500">Song Library (A-Z)</h2>
+        <div class="flex items-center gap-2">
+          <span id="syncStatus" class="inline-block w-2 h-2 rounded-full bg-neutral-400"></span>
+          <span id="syncText" class="text-xs text-neutral-500 font-medium">Local Only</span>
+        </div>
+      </div>
       
-      if (chordMatches.length > 0 && chordMatches.length >= words.length / 2) {
-        return line.replace(chordPattern, '($1)');
+      <!-- Song Alphabetical List Container -->
+      <div id="songList" class="space-y-2">
+        <div class="song-card p-6 rounded-lg text-center text-neutral-500 text-sm">
+          No songs added yet. Click "+ Add Song" to begin archiving!
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Dedicated Full-Screen Reader Page (Songbase Style) -->
+  <div id="readerPage" class="fixed inset-0 bg-white hidden flex-col z-50 overflow-y-auto">
+    <!-- Reader Top Bar -->
+    <header class="bg-black text-white px-4 md:px-6 py-4 shadow-sm flex justify-between items-center border-b border-neutral-800 sticky top-0 z-10">
+      <button onclick="closeReader()" class="bg-neutral-800 hover:bg-neutral-700 text-white px-3 py-1.5 rounded-md text-xs md:text-sm font-medium transition cursor-pointer">
+        ← All Songs
+      </button>
+      
+      <!-- Transpose & Edit Action Controls -->
+      <div class="flex items-center gap-2">
+        <div class="flex items-center bg-neutral-800 rounded-md border border-neutral-700 p-0.5 text-xs text-white">
+          <span class="px-1.5 text-neutral-400 font-medium hidden sm:inline">Key:</span>
+          <button onclick="transposeSong(-1)" class="px-2 py-1 hover:bg-neutral-700 rounded font-bold cursor-pointer">♭</button>
+          <span id="transposeOffset" class="px-1 font-mono text-blue-400 font-semibold">0</span>
+          <button onclick="transposeSong(1)" class="px-2 py-1 hover:bg-neutral-700 rounded font-bold cursor-pointer">♯</button>
+        </div>
+        <button onclick="openEditSong()" class="text-xs bg-neutral-800 hover:bg-neutral-700 text-white px-3 py-1.5 rounded-md transition border border-neutral-700 cursor-pointer font-medium">
+          Edit
+        </button>
+        <button onclick="deleteCurrentSong()" class="text-xs bg-red-950 hover:bg-red-900 text-red-200 px-3 py-1.5 rounded-md transition border border-red-900 cursor-pointer font-medium">
+          Delete
+        </button>
+      </div>
+    </header>
+
+    <!-- Full Screen Song Content Area -->
+    <main class="max-w-3xl w-full mx-auto p-4 md:p-10 flex-1 flex flex-col">
+      <div class="bg-neutral-50 p-5 md:p-10 rounded-lg shadow-sm border border-neutral-200 flex-1 flex flex-col">
+        <div class="border-b border-neutral-200 pb-4 mb-5 flex justify-between items-baseline">
+          <div>
+            <h2 id="viewSongTitle" class="text-xl md:text-3xl font-bold text-neutral-900 tracking-tight"></h2>
+            <p id="viewSongKey" class="text-xs md:text-sm font-medium text-neutral-500 mt-1"></p>
+          </div>
+        </div>
+
+        <!-- Aligned Chord/Lyric Container -->
+        <div class="flex-1 bg-white p-4 md:p-8 rounded-lg border border-neutral-200 shadow-inner overflow-x-auto">
+          <div id="viewSongLyrics" class="font-mono text-sm md:text-base leading-relaxed text-neutral-900 space-y-4"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Add / Edit Song Modal -->
+  <div id="addSongModal" class="fixed inset-0 bg-black/50 backdrop-blur-xs hidden items-center justify-center p-2 md:p-4 z-40">
+    <div class="bg-white w-full max-w-lg rounded-xl shadow-xl p-4 md:p-6 border border-neutral-200 relative max-h-[95vh] overflow-y-auto">
+      <h3 id="modalHeading" class="text-lg font-bold text-neutral-900 mb-3">Add New Song</h3>
+      
+      <!-- AI Image Scanner Box -->
+      <div class="mb-4 p-3 bg-neutral-100 rounded-lg border border-neutral-300 text-xs">
+        <label class="block font-semibold text-neutral-800 mb-1">✨ AI Scan Sheet Music / Photo</label>
+        <input type="file" id="imageInput" accept="image/*" onchange="handleImageUpload(event)" class="w-full text-xs text-neutral-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-black file:text-white hover:file:bg-neutral-800 cursor-pointer">
+        <p id="ocrStatus" class="mt-1 text-neutral-500 italic">Upload a photo of a lyric sheet to auto-fill text.</p>
+      </div>
+
+      <div class="space-y-3 text-sm">
+        <input type="hidden" id="editingSongId">
+        <div>
+          <label class="block font-medium text-neutral-700 mb-1">Song Title</label>
+          <input type="text" id="songTitle" class="w-full px-3 py-2 border border-neutral-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-black" placeholder="Amazing Grace">
+        </div>
+        <div>
+          <label class="block font-medium text-neutral-700 mb-1">Key / Artist</label>
+          <input type="text" id="songKey" class="w-full px-3 py-2 border border-neutral-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-black" placeholder="G or Traditional">
+        </div>
+        <div>
+          <label class="block font-medium text-neutral-700 mb-1">Chords & Lyrics (Use [G] or (G) for chords)</label>
+          <textarea id="songLyrics" rows="8" class="w-full px-3 py-2 border border-neutral-300 rounded-lg bg-white font-mono text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-black" placeholder="(G) Amazing grace, how (C) sweet the (G) sound..."></textarea>
+        </div>
+      </div>
+      <div class="mt-5 flex justify-end gap-2 text-sm">
+        <button onclick="closeModal('addSongModal')" class="px-4 py-2 border border-neutral-300 rounded-lg text-neutral-700 hover:bg-neutral-100 cursor-pointer font-medium text-xs md:text-sm">Cancel</button>
+        <button onclick="saveSong()" class="px-4 py-2 bg-black text-white rounded-lg hover:bg-neutral-800 cursor-pointer font-medium text-xs md:text-sm">Save Song</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase Settings Modal -->
+  <div id="settingsModal" class="fixed inset-0 bg-black/50 backdrop-blur-xs hidden items-center justify-center p-2 md:p-4 z-50">
+    <div class="bg-white w-full max-w-md rounded-xl shadow-xl p-4 md:p-6 border border-neutral-200 relative max-h-[95vh] overflow-y-auto">
+      <h3 class="text-lg font-bold text-neutral-900 mb-1">Firebase Cloud Setup</h3>
+      <p class="text-xs text-neutral-500 mb-3">Paste your free Firebase web keys below to sync songs across devices.</p>
+      
+      <div class="space-y-2 text-xs">
+        <div>
+          <label class="block font-medium text-neutral-700 mb-0.5">apiKey</label>
+          <input type="text" id="apiKey" class="w-full px-2.5 py-1.5 border border-neutral-300 rounded bg-white font-mono">
+        </div>
+        <div>
+          <label class="block font-medium text-neutral-700 mb-0.5">authDomain</label>
+          <input type="text" id="authDomain" class="w-full px-2.5 py-1.5 border border-neutral-300 rounded bg-white font-mono">
+        </div>
+        <div>
+          <label class="block font-medium text-neutral-700 mb-0.5">projectId</label>
+          <input type="text" id="projectId" class="w-full px-2.5 py-1.5 border border-neutral-300 rounded bg-white font-mono">
+        </div>
+        <div>
+          <label class="block font-medium text-neutral-700 mb-0.5">storageBucket</label>
+          <input type="text" id="storageBucket" class="w-full px-2.5 py-1.5 border border-neutral-300 rounded bg-white font-mono">
+        </div>
+        <div>
+          <label class="block font-medium text-neutral-700 mb-0.5">messagingSenderId</label>
+          <input type="text" id="messagingSenderId" class="w-full px-2.5 py-1.5 border border-neutral-300 rounded bg-white font-mono">
+        </div>
+        <div>
+          <label class="block font-medium text-neutral-700 mb-0.5">appId</label>
+          <input type="text" id="appId" class="w-full px-2.5 py-1.5 border border-neutral-300 rounded bg-white font-mono">
+        </div>
+      </div>
+
+      <div class="mt-5 flex justify-end gap-2 text-sm">
+        <button onclick="closeModal('settingsModal')" class="px-4 py-2 border border-neutral-300 rounded-lg text-neutral-700 hover:bg-neutral-100 cursor-pointer font-medium text-xs md:text-sm">Cancel</button>
+        <button onclick="saveConfig()" class="px-4 py-2 bg-black text-white rounded-lg hover:bg-neutral-800 cursor-pointer font-medium text-xs md:text-sm">Save Configuration</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let db = null;
+    let songs = JSON.parse(localStorage.getItem('fs_songs') || '[]');
+    let currentViewingSongId = null;
+    let currentTransposeStep = 0;
+
+    const CHROMATIC_SCALE = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const FLAT_SCALE = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+
+    function transposeChord(chord, steps) {
+      if (!chord || steps === 0) return chord;
+      return chord.replace(/[A-G][#b]?/g, (match) => {
+        let index = CHROMATIC_SCALE.indexOf(match);
+        if (index === -1) index = FLAT_SCALE.indexOf(match);
+        if (index === -1) return match;
+        let newIndex = (index + steps) % 12;
+        if (newIndex < 0) newIndex += 12;
+        return CHROMATIC_SCALE[newIndex];
+      });
+    }
+
+    function openModal(id) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.remove('hidden');
+        el.classList.add('flex');
       }
-      
-      // If line has inline chords without brackets, convert them to (Chord)
-      return line.replace(/\[([A-G][#b]?[^\]]*)\]/g, '($1)');
-    }).join('\n');
+    }
 
-    document.getElementById('songLyrics').value = formattedText;
-    statusEl.innerText = "✨ Scan complete! Chords formatted to (G) style.";
-  } catch (err) {
-    console.error("OCR Error:", err);
-    statusEl.innerText = "❌ Error reading image. Please type lyrics manually.";
-  }
-}
+    function closeModal(id) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.add('hidden');
+        el.classList.remove('flex');
+      }
+    }
+
+    function openAddModal() {
+      document.getElementById('modalHeading').innerText = "Add New Song";
+      document.getElementById('editingSongId').value = "";
+      document.getElementById('songTitle').value = "";
+      document.getElementById('songKey').value = "";
+      document.getElementById('songLyrics').value = "";
+      document.getElementById('imageInput').value = "";
+      document.getElementById('ocrStatus').innerText = "Upload a photo of a lyric sheet to auto-fill text.";
+      openModal('addSongModal');
+    }
+
+    async function handleImageUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const statusEl = document.getElementById('ocrStatus');
+      statusEl.innerText = "⏳ AI is scanning and formatting chords...";
+
+      try {
+        const { data: { text } } = await Tesseract.recognize(file, 'eng');
+        
+        let cleanedLines = text.split('\n')
+          .map(line => line.trim())
+          .filter(line => line.length > 0 && !/^[^a-zA-Z0-9()\[\]]+$/.test(line));
+
+        let formattedText = cleanedLines.map(line => {
+          const chordPattern = /\b([A-G][#b]?[m7maj9susdim]*(\/[A-G][#b]?)?)\b/g;
+          const words = line.split(/\s+/);
+          const chordMatches = line.match(chordPattern) || [];
+          
+          if (chordMatches.length > 0 && chordMatches.length >= words.length / 2) {
+            return line.replace(chordPattern, '($1)');
+          }
+          
+          return line.replace(/\[([A-G][#b]?[^\]]*)\]/g, '($1)');
+        }).join('\n');
+
+        document.getElementById('songLyrics').value = formattedText;
+        statusEl.innerText = "✨ Scan complete! Chords formatted to (G) style.";
+      } catch (err) {
+        console.error("OCR Error:", err);
+        statusEl.innerText = "❌ Error reading image. Please type lyrics manually.";
+      }
+    }
+
+    function initFirebase() {
+      const cfg = JSON.parse(localStorage.getItem('fs_firebase_cfg') || '{}');
+      if (cfg.apiKey && cfg.projectId) {
+        try {
+          if (!firebase.apps.length) firebase.initializeApp(cfg);
+          db = firebase.firestore();
+          document.getElementById('syncStatus').className = 'inline-block w-2 h-2 rounded-full bg-emerald-500';
+          document.getElementById('syncText').innerText = 'Cloud Synced';
+          loadCloudSongs();
+        } catch(e) {
+          console.error("Firebase Init Error:", e);
+          document.getElementById('syncStatus').className = 'inline-block w-2 h-2 rounded-full bg-red-500';
+          document.getElementById('syncText').innerText = 'Connection Error';
+        }
+      }
+    }
+
+    function saveConfig() {
+      const cfg = {
+        apiKey: document.getElementById('apiKey').value.trim(),
+        authDomain: document.getElementById('authDomain').value.trim(),
+        projectId: document.getElementById('projectId').value.trim(),
+        storageBucket: document.getElementById('storageBucket').value.trim(),
+        messagingSenderId: document.getElementById('messagingSenderId').value.trim(),
+        appId: document.getElementById('appId').value.trim()
+      };
+      localStorage.setItem('fs_firebase_cfg', JSON.stringify(cfg));
+      closeModal('settingsModal');
+      initFirebase();
+    }
+
+    function sortSongsAlphabetically(list) {
+      return list.sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'accent', numeric: true }));
+    }
+
+    function renderSongs(songsToRender = songs) {
+      const container = document.getElementById('songList');
+      if (!container) return;
+      
+      sortSongsAlphabetically(songsToRender);
+
+      if (!songsToRender.length) {
+        container.innerHTML = `<div class="song-card p-6 rounded-lg text-center text-neutral-500 text-sm">No songs found.</div>`;
+        return;
+      }
+
+      container.innerHTML = songsToRender.map(s => `
+        <div onclick="openReader('${s.id}')" class="song-card px-4 md:px-5 py-3.5 rounded-lg cursor-pointer flex justify-between items-center group">
+          <div class="flex items-center gap-3 md:gap-4 overflow-hidden">
+            <span class="text-xs font-mono font-semibold text-neutral-500 w-12 md:w-16 uppercase shrink-0">${s.key || 'Key'}</span>
+            <h3 class="font-semibold text-sm md:text-base text-neutral-900 group-hover:text-black transition truncate">${s.title}</h3>
+          </div>
+          <span class="text-xs text-neutral-400 group-hover:text-neutral-700 font-medium shrink-0 ml-2">View →</span>
+        </div>
+      `).join('');
+    }
+
+    function handleSearch() {
+      const query = document.getElementById('searchInput').value.toLowerCase();
+      const filtered = songs.filter(s => 
+        s.title.toLowerCase().includes(query) || 
+        (s.key && s.key.toLowerCase().includes(query))
+      );
+      renderSongs(filtered);
+    }
+
+    function parseChordPro(rawText, transposeSteps = 0) {
+      if (!rawText) return '';
+      const lines = rawText.split('\n');
+      return lines.map(line => {
+        if (!line.trim()) return '<div class="h-4"></div>';
+        
+        const chordRegex = /(\[([A-G][#b]?[m7maj9susdim]*(\/[A-G][#b]?)?)\]|\(([A-G][#b]?[m7maj9susdim]*(\/[A-G][#b]?)?)\))/g;
+
+        if (chordRegex.test(line)) {
+          const normalizedLine = line.replace(/\(([A-G][#b]?[m7maj9susdim]*(\/[A-G][#b]?)?)\)/g, '[$1]');
+          const parts = normalizedLine.split(/(\[[^\]]+\])/g);
+          
+          let html = '<div class="flex flex-wrap items-end gap-x-2.5 gap-y-5 my-1">';
+          let currentChord = '';
+          
+          for (let i = 0; i < parts.length; i++) {
+            let part = parts[i];
+            if (part.startsWith('[') && part.endsWith(']')) {
+              currentChord = transposeChord(part.slice(1, -1), transposeSteps);
+            } else if (part) {
+              html += `<div class="flex flex-col items-start">
+                <span class="text-blue-600 font-bold text-xs h-4 leading-none">${currentChord}</span>
+                <span>${part}</span>
+              </div>`;
+              currentChord = '';
+            }
+          }
+          if (currentChord) {
+            html += `<div class="flex flex-col items-start">
+              <span class="text-blue-600 font-bold text-xs h-4 leading-none">${currentChord}</span>
+              <span>&nbsp;</span>
+            </div>`;
+          }
+          html += '</div>';
+          return html;
+        } else {
+          return `<div>${line}</div>`;
+        }
+      }).join('');
+    }
+
+    function transposeSong(delta) {
+      currentTransposeStep += delta;
+      document.getElementById('transposeOffset').innerText = (currentTransposeStep > 0 ? '+' : '') + currentTransposeStep;
+      const song = songs.find(s => s.id === currentViewingSongId);
+      if (song) {
+        document.getElementById('viewSongLyrics').innerHTML = parseChordPro(song.lyrics || '', currentTransposeStep);
+      }
+    }
+
+    function openReader(id) {
+      const song = songs.find(s => s.id === id);
+      if (!song) return;
+      currentViewingSongId = id;
+      currentTransposeStep = 0;
+      document.getElementById('transposeOffset').innerText = '0';
+      document.getElementById('viewSongTitle').innerText = song.title;
+      document.getElementById('viewSongKey').innerText = song.key ?
