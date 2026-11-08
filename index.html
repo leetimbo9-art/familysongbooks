@@ -7,6 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <style>
     body { 
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
@@ -65,7 +66,7 @@
         </div>
       </div>
       
-      <!-- Songbase Alphabetical List Container -->
+      <!-- Song Alphabetical List Container -->
       <div id="songList" class="space-y-2">
         <div class="song-card p-6 rounded-lg text-center text-neutral-500 text-sm">
           No songs added yet. Click "+ Add Song" to begin archiving!
@@ -82,7 +83,7 @@
         ← All Songs
       </button>
       
-      <!-- Small Edit & Delete Action Buttons -->
+      <!-- Edit & Delete Action Buttons -->
       <div class="flex items-center gap-2">
         <button onclick="openEditSong()" class="text-xs bg-neutral-800 hover:bg-neutral-700 text-white px-3 py-1.5 rounded-md transition border border-neutral-700 cursor-pointer font-medium">
           Edit
@@ -112,8 +113,16 @@
 
   <!-- Add / Edit Song Modal -->
   <div id="addSongModal" class="fixed inset-0 bg-black/50 backdrop-blur-xs hidden items-center justify-center p-4 z-40">
-    <div class="bg-white w-full max-w-lg rounded-xl shadow-xl p-6 border border-neutral-200 relative">
+    <div class="bg-white w-full max-w-lg rounded-xl shadow-xl p-6 border border-neutral-200 relative max-h-[90vh] overflow-y-auto">
       <h3 id="modalHeading" class="text-lg font-bold text-neutral-900 mb-4">Add New Song</h3>
+      
+      <!-- AI Image Scanner Box -->
+      <div class="mb-4 p-3 bg-neutral-100 rounded-lg border border-neutral-300 text-xs">
+        <label class="block font-semibold text-neutral-800 mb-1">✨ AI Scan Sheet Music / Photo</label>
+        <input type="file" id="imageInput" accept="image/*" onchange="handleImageUpload(event)" class="w-full text-xs text-neutral-600 file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-black file:text-white hover:file:bg-neutral-800 cursor-pointer">
+        <p id="ocrStatus" class="mt-1 text-neutral-500 italic">Upload a photo of a lyric sheet or song book page to auto-fill text.</p>
+      </div>
+
       <div class="space-y-4 text-sm">
         <input type="hidden" id="editingSongId">
         <div>
@@ -203,7 +212,27 @@
       document.getElementById('songTitle').value = "";
       document.getElementById('songKey').value = "";
       document.getElementById('songLyrics').value = "";
+      document.getElementById('imageInput').value = "";
+      document.getElementById('ocrStatus').innerText = "Upload a photo of a lyric sheet or song book page to auto-fill text.";
       openModal('addSongModal');
+    }
+
+    // AI Image OCR Handler
+    async function handleImageUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const statusEl = document.getElementById('ocrStatus');
+      statusEl.innerText = "⏳ AI is scanning the image for lyrics and chords...";
+
+      try {
+        const { data: { text } } = await Tesseract.recognize(file, 'eng');
+        document.getElementById('songLyrics').value = text.trim();
+        statusEl.innerText = "✨ Scan complete! Text extracted successfully into lyrics box.";
+      } catch (err) {
+        console.error("OCR Error:", err);
+        statusEl.innerText = "❌ Error reading image. Please type lyrics manually.";
+      }
     }
 
     function initFirebase() {
@@ -302,6 +331,8 @@
       document.getElementById('songTitle').value = song.title;
       document.getElementById('songKey').value = song.key || '';
       document.getElementById('songLyrics').value = song.lyrics || '';
+      document.getElementById('imageInput').value = "";
+      document.getElementById('ocrStatus').innerText = "Upload a photo of a lyric sheet or song book page to auto-fill text.";
       
       openModal('addSongModal');
     }
