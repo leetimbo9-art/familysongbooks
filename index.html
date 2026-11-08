@@ -25,10 +25,10 @@
         <h1 class="text-xl md:text-2xl font-bold tracking-wide">Family Songbooks</h1>
       </div>
       <div class="flex items-center space-x-3">
-        <button onclick="openAddModal()" class="bg-[#8c6747] hover:bg-[#a37954] text-white px-3 py-1.5 rounded text-sm font-sans flex items-center gap-1 transition">
+        <button onclick="openAddModal()" class="bg-[#8c6747] hover:bg-[#a37954] text-white px-3 py-1.5 rounded text-sm font-sans flex items-center gap-1 transition cursor-pointer">
           <span>+</span> Add Song
         </button>
-        <button onclick="openModal('settingsModal')" title="Firebase Settings" class="p-2 hover:bg-[#523a2e] rounded-full transition text-lg">
+        <button onclick="openModal('settingsModal')" title="Firebase Settings" class="p-2 hover:bg-[#523a2e] rounded-full transition text-lg cursor-pointer">
           ⚙️
         </button>
       </div>
@@ -73,16 +73,16 @@
   <div id="readerPage" class="fixed inset-0 bg-[#fcf8f2] hidden flex-col z-50 overflow-y-auto">
     <!-- Reader Top Bar -->
     <header class="bg-[#3c2a21] text-[#f5efe6] px-6 py-4 shadow-md flex justify-between items-center border-b-4 border-[#8c6747] sticky top-0 z-10">
-      <button onclick="closeReader()" class="bg-[#8c6747] hover:bg-[#a37954] text-white px-3 py-1.5 rounded text-sm font-sans flex items-center gap-2 transition">
+      <button onclick="closeReader()" class="bg-[#8c6747] hover:bg-[#a37954] text-white px-3 py-1.5 rounded text-sm font-sans flex items-center gap-2 transition cursor-pointer">
         <span>←</span> All Songs
       </button>
       
       <!-- Small Edit & Delete Action Buttons -->
       <div class="flex items-center gap-2 font-sans">
-        <button onclick="openEditSong()" class="text-xs bg-[#523a2e] hover:bg-[#684b3e] text-amber-100 px-2.5 py-1 rounded transition border border-amber-900/30">
+        <button onclick="openEditSong()" class="text-xs bg-[#523a2e] hover:bg-[#684b3e] text-amber-100 px-2.5 py-1 rounded transition border border-amber-900/30 cursor-pointer">
           Edit
         </button>
-        <button onclick="deleteCurrentSong()" class="text-xs bg-red-950/40 hover:bg-red-900/65 text-red-200 px-2.5 py-1 rounded transition border border-red-900/30">
+        <button onclick="deleteCurrentSong()" class="text-xs bg-red-950/40 hover:bg-red-900/65 text-red-200 px-2.5 py-1 rounded transition border border-red-900/30 cursor-pointer">
           Delete
         </button>
       </div>
@@ -125,8 +125,8 @@
         </div>
       </div>
       <div class="mt-6 flex justify-end gap-3 font-sans text-sm">
-        <button onclick="closeModal('addSongModal')" class="px-4 py-2 border border-gray-400 rounded">Cancel</button>
-        <button onclick="saveSong()" class="px-4 py-2 bg-[#3c2a21] text-white rounded hover:bg-[#523a2e]">Save Song</button>
+        <button onclick="closeModal('addSongModal')" class="px-4 py-2 border border-gray-400 rounded cursor-pointer">Cancel</button>
+        <button onclick="saveSong()" class="px-4 py-2 bg-[#3c2a21] text-white rounded hover:bg-[#523a2e] cursor-pointer">Save Song</button>
       </div>
     </div>
   </div>
@@ -165,8 +165,8 @@
       </div>
 
       <div class="mt-6 flex justify-end gap-3 font-sans text-sm">
-        <button onclick="closeModal('settingsModal')" class="px-4 py-2 border border-gray-400 rounded">Cancel</button>
-        <button onclick="saveConfig()" class="px-4 py-2 bg-[#3c2a21] text-white rounded hover:bg-[#523a2e]">Save Configuration</button>
+        <button onclick="closeModal('settingsModal')" class="px-4 py-2 border border-gray-400 rounded cursor-pointer">Cancel</button>
+        <button onclick="saveConfig()" class="px-4 py-2 bg-[#3c2a21] text-white rounded hover:bg-[#523a2e] cursor-pointer">Save Configuration</button>
       </div>
     </div>
   </div>
@@ -178,14 +178,18 @@
 
     function openModal(id) {
       const el = document.getElementById(id);
-      el.classList.remove('hidden');
-      el.classList.add('flex');
+      if (el) {
+        el.classList.remove('hidden');
+        el.classList.add('flex');
+      }
     }
 
     function closeModal(id) {
       const el = document.getElementById(id);
-      el.classList.add('hidden');
-      el.classList.remove('flex');
+      if (el) {
+        el.classList.add('hidden');
+        el.classList.remove('flex');
+      }
     }
 
     function openAddModal() {
@@ -207,7 +211,7 @@
           document.getElementById('syncText').innerText = 'Cloud Synced';
           loadCloudSongs();
         } catch(e) {
-          console.error(e);
+          console.error("Firebase Init Error:", e);
           document.getElementById('syncStatus').className = 'inline-block w-2.5 h-2.5 rounded-full bg-red-500';
           document.getElementById('syncText').innerText = 'Connection Error';
         }
@@ -230,6 +234,7 @@
 
     function renderSongs(songsToRender = songs) {
       const container = document.getElementById('songList');
+      if (!container) return;
       if (!songsToRender.length) {
         container.innerHTML = `<div class="parchment p-6 rounded-lg text-center text-gray-600 col-span-full">No songs found.</div>`;
         return;
@@ -328,3 +333,44 @@
 
       closeModal('addSongModal');
       renderSongs();
+
+      if (currentViewingSongId === songId) {
+        document.getElementById('viewSongTitle').innerText = title;
+        document.getElementById('viewSongKey').innerText = key || 'Standard Key';
+        document.getElementById('viewSongLyrics').innerText = lyrics || 'No lyrics added yet.';
+      }
+    }
+
+    function loadCloudSongs() {
+      if (!db) return;
+      db.collection('songs').onSnapshot(snap => {
+        const cloudSongs = [];
+        snap.forEach(doc => cloudSongs.push(doc.data()));
+        if (cloudSongs.length) {
+          songs = cloudSongs;
+          renderSongs();
+          if (currentViewingSongId) {
+            const active = songs.find(s => s.id === currentViewingSongId);
+            if (active) {
+              document.getElementById('viewSongTitle').innerText = active.title;
+              document.getElementById('viewSongKey').innerText = active.key || 'Standard Key';
+              document.getElementById('viewSongLyrics').innerText = active.lyrics || '';
+            }
+          }
+        }
+      });
+    }
+
+    // Load saved settings if present
+    const savedCfg = JSON.parse(localStorage.getItem('fs_firebase_cfg') || '{}');
+    ['apiKey','authDomain','projectId','storageBucket','messagingSenderId','appId'].forEach(k => {
+      if (savedCfg[k] && document.getElementById(k)) {
+        document.getElementById(k).value = savedCfg[k];
+      }
+    });
+
+    renderSongs();
+    initFirebase();
+  </script>
+</body>
+</html>
