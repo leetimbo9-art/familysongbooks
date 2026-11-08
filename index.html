@@ -14,79 +14,86 @@
     .parchment { background-color: #f5efe6; border: 1px solid #e2d5c3; }
   </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col relative">
 
-  <!-- Header Navigation -->
-  <header class="bg-[#3c2a21] text-[#f5efe6] px-6 py-4 shadow-md flex justify-between items-center border-b-4 border-[#8c6747]">
-    <div class="flex items-center space-x-3">
-      <span class="text-2xl">📖</span>
-      <h1 class="text-xl md:text-2xl font-bold tracking-wide">Family Songbooks</h1>
-    </div>
-    <div class="flex items-center space-x-3">
-      <button onclick="openModal('addSongModal')" class="bg-[#8c6747] hover:bg-[#a37954] text-white px-3 py-1.5 rounded text-sm font-sans flex items-center gap-1 transition">
-        <span>+</span> Add Song
-      </button>
-      <button onclick="openModal('settingsModal')" title="Firebase Settings" class="p-2 hover:bg-[#523a2e] rounded-full transition text-lg">
-        ⚙️
-      </button>
-    </div>
-  </header>
+  <!-- Main Library View -->
+  <div id="libraryPage" class="flex-1 flex flex-col">
+    <!-- Header Navigation -->
+    <header class="bg-[#3c2a21] text-[#f5efe6] px-6 py-4 shadow-md flex justify-between items-center border-b-4 border-[#8c6747]">
+      <div class="flex items-center space-x-3">
+        <span class="text-2xl">📖</span>
+        <h1 class="text-xl md:text-2xl font-bold tracking-wide">Family Songbooks</h1>
+      </div>
+      <div class="flex items-center space-x-3">
+        <button onclick="openModal('addSongModal')" class="bg-[#8c6747] hover:bg-[#a37954] text-white px-3 py-1.5 rounded text-sm font-sans flex items-center gap-1 transition">
+          <span>+</span> Add Song
+        </button>
+        <button onclick="openModal('settingsModal')" title="Firebase Settings" class="p-2 hover:bg-[#523a2e] rounded-full transition text-lg">
+          ⚙️
+        </button>
+      </div>
+    </header>
 
-  <!-- Main Content Area -->
-  <main class="flex-1 max-w-4xl w-full mx-auto p-4 md:p-6">
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-      <h2 class="text-xl font-semibold text-[#3c2a21]">Song Archive</h2>
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-4xl w-full mx-auto p-4 md:p-6">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <h2 class="text-xl font-semibold text-[#3c2a21]">Song Archive</h2>
+        
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+          <!-- Search Input Field -->
+          <div class="relative flex-1 sm:w-64">
+            <input 
+              type="text" 
+              id="searchInput" 
+              oninput="handleSearch()" 
+              placeholder="Search by title or key..." 
+              class="w-full px-3 py-1.5 pl-8 border border-amber-900/20 rounded bg-white font-sans text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-[#8c6747]"
+            >
+            <span class="absolute left-2.5 top-2 text-xs text-gray-400">🔍</span>
+          </div>
+
+          <!-- Connection Status Light -->
+          <div class="flex items-center gap-2 self-end sm:self-center">
+            <span id="syncStatus" class="inline-block w-2.5 h-2.5 rounded-full bg-gray-400"></span>
+            <span id="syncText" class="text-xs font-sans text-gray-600">Local Only</span>
+          </div>
+        </div>
+      </div>
       
-      <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
-        <!-- Search Input Field -->
-        <div class="relative flex-1 sm:w-64">
-          <input 
-            type="text" 
-            id="searchInput" 
-            oninput="handleSearch()" 
-            placeholder="Search by title or key..." 
-            class="w-full px-3 py-1.5 pl-8 border border-amber-900/20 rounded bg-white font-sans text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-[#8c6747]"
-          >
-          <span class="absolute left-2.5 top-2 text-xs text-gray-400">🔍</span>
-        </div>
-
-        <!-- Connection Status Light -->
-        <div class="flex items-center gap-2 self-end sm:self-center">
-          <span id="syncStatus" class="inline-block w-2.5 h-2.5 rounded-full bg-gray-400"></span>
-          <span id="syncText" class="text-xs font-sans text-gray-600">Local Only</span>
+      <!-- Song Cards Grid -->
+      <div id="songList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="parchment p-6 rounded-lg text-center text-gray-600 col-span-full">
+          No songs added yet. Click "+ Add Song" to begin archiving!
         </div>
       </div>
-    </div>
-    
-    <!-- Song List Grid -->
-    <div id="songList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div class="parchment p-6 rounded-lg text-center text-gray-600 col-span-full">
-        No songs added yet. Click "+ Add Song" to begin archiving!
-      </div>
-    </div>
-  </main>
+    </main>
+  </div>
 
-  <!-- Dedicated Song View Modal (Opens when a song is clicked) -->
-  <div id="viewSongModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
-    <div class="parchment w-full max-w-2xl max-h-[90vh] rounded-lg shadow-2xl p-6 md:p-8 relative flex flex-col overflow-hidden border-2 border-[#8c6747]">
-      <div class="flex justify-between items-start border-b border-[#e2d5c3] pb-4 mb-4">
-        <div>
-          <h2 id="viewSongTitle" class="text-2xl md:text-3xl font-bold text-[#3c2a21]"></h2>
-          <p id="viewSongKey" class="text-sm font-sans text-[#8c6747] font-semibold mt-1"></p>
+  <!-- Dedicated Full-Screen Reader View Page -->
+  <div id="readerPage" class="fixed inset-0 bg-[#fcf8f2] hidden flex-col z-50 overflow-y-auto">
+    <!-- Reader Top Bar -->
+    <header class="bg-[#3c2a21] text-[#f5efe6] px-6 py-4 shadow-md flex justify-between items-center border-b-4 border-[#8c6747] sticky top-0 z-10">
+      <button onclick="closeReader()" class="bg-[#8c6747] hover:bg-[#a37954] text-white px-3 py-1.5 rounded text-sm font-sans flex items-center gap-2 transition">
+        <span>←</span> Back to Songs
+      </button>
+      <button onclick="deleteCurrentSong()" class="text-red-300 hover:text-red-100 font-sans text-xs font-semibold">
+        Delete Song
+      </button>
+    </header>
+
+    <!-- Full Screen Song Content Area -->
+    <main class="max-w-3xl w-full mx-auto p-6 md:p-10 flex-1 flex flex-col">
+      <div class="parchment p-6 md:p-10 rounded-lg shadow-md border border-[#e2d5c3] flex-1 flex flex-col">
+        <div class="border-b border-[#e2d5c3] pb-4 mb-6">
+          <h2 id="viewSongTitle" class="text-3xl md:text-4xl font-bold text-[#3c2a21]"></h2>
+          <p id="viewSongKey" class="text-base font-sans text-[#8c6747] font-semibold mt-2"></p>
         </div>
-        <button onclick="closeModal('viewSongModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold px-2">&times;</button>
-      </div>
 
-      <!-- Scrollable Lyrics Area -->
-      <div class="flex-1 overflow-y-auto bg-white/70 p-4 rounded border border-amber-900/10">
-        <pre id="viewSongLyrics" class="whitespace-pre-wrap font-mono text-sm md:text-base text-gray-800 leading-relaxed"></pre>
+        <div class="flex-1 bg-white/80 p-6 rounded-lg border border-amber-900/10">
+          <pre id="viewSongLyrics" class="whitespace-pre-wrap font-mono text-sm md:text-lg text-gray-800 leading-relaxed"></pre>
+        </div>
       </div>
-
-      <div class="mt-6 flex justify-between items-center font-sans text-sm pt-4 border-t border-[#e2d5c3]">
-        <button onclick="deleteCurrentSong()" class="text-red-700 hover:text-red-900 text-xs font-semibold">Delete Song</button>
-        <button onclick="closeModal('viewSongModal')" class="px-5 py-2 bg-[#3c2a21] text-white rounded hover:bg-[#523a2e] font-sans">Close</button>
-      </div>
-    </div>
+    </main>
   </div>
 
   <!-- Add Song Modal -->
@@ -205,14 +212,14 @@
     function renderSongs(songsToRender = songs) {
       const container = document.getElementById('songList');
       if (!songsToRender.length) {
-        container.innerHTML = `<div class="parchment p-6 rounded-lg text-center text-gray-600 col-span-full">No songs matching your search.</div>`;
+        container.innerHTML = `<div class="parchment p-6 rounded-lg text-center text-gray-600 col-span-full">No songs found.</div>`;
         return;
       }
       container.innerHTML = songsToRender.map(s => `
-        <div onclick="viewSong('${s.id}')" class="parchment p-5 rounded-lg shadow-sm border border-[#e2d5c3] cursor-pointer hover:shadow-md hover:border-[#8c6747] transition group">
+        <div onclick="openReader('${s.id}')" class="parchment p-5 rounded-lg shadow-sm border border-[#e2d5c3] cursor-pointer hover:shadow-md hover:border-[#8c6747] transition group">
           <div class="flex justify-between items-start">
             <h3 class="font-bold text-lg text-[#3c2a21] group-hover:text-[#8c6747] transition">${s.title}</h3>
-            <span class="text-xs font-sans text-gray-400 group-hover:text-gray-600">Open ↗</span>
+            <span class="text-xs font-sans text-gray-400 group-hover:text-gray-600">Read →</span>
           </div>
           <p class="text-xs font-sans text-[#8c6747] mt-1 mb-3">${s.key || 'Standard Key'}</p>
           <pre class="whitespace-pre-wrap font-mono text-xs bg-white/60 p-3 rounded border border-amber-900/10 text-gray-800 line-clamp-3">${s.lyrics || ''}</pre>
@@ -229,14 +236,25 @@
       renderSongs(filtered);
     }
 
-    function viewSong(id) {
+    function openReader(id) {
       const song = songs.find(s => s.id === id);
       if (!song) return;
       currentViewingSongId = id;
       document.getElementById('viewSongTitle').innerText = song.title;
       document.getElementById('viewSongKey').innerText = song.key || 'Standard Key';
       document.getElementById('viewSongLyrics').innerText = song.lyrics || 'No lyrics added yet.';
-      openModal('viewSongModal');
+      
+      const reader = document.getElementById('readerPage');
+      reader.classList.remove('hidden');
+      reader.classList.add('flex');
+      window.scrollTo(0, 0);
+    }
+
+    function closeReader() {
+      const reader = document.getElementById('readerPage');
+      reader.classList.add('hidden');
+      reader.classList.remove('flex');
+      currentViewingSongId = null;
     }
 
     function deleteCurrentSong() {
@@ -249,7 +267,7 @@
         db.collection('songs').doc(currentViewingSongId).delete();
       }
 
-      closeModal('viewSongModal');
+      closeReader();
       renderSongs();
     }
 
@@ -286,7 +304,7 @@
       });
     }
 
-    // Populate existing config fields
+    // Load saved settings if present
     const savedCfg = JSON.parse(localStorage.getItem('fs_firebase_cfg') || '{}');
     ['apiKey','authDomain','projectId','storageBucket','messagingSenderId','appId'].forEach(k => {
       if (savedCfg[k] && document.getElementById(k)) {
