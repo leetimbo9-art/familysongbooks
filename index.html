@@ -7,166 +7,171 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Cinzel:wght@500;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Crimson Text', serif; background-color: #fcf8f2; color: #2c221e; }
-    h1, h2, h3, .heading-font { font-family: 'Cinzel', serif; }
-    .parchment { background-color: #f5efe6; border: 1px solid #e2d5c3; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+      background-color: #ffffff; 
+      color: #111111; 
+    }
+    .song-card { 
+      background-color: #fafafa; 
+      border: 1px solid #e5e5e5; 
+      transition: all 0.15s ease;
+    }
+    .song-card:hover { 
+      background-color: #f0f0f0; 
+      border-color: #cccccc; 
+    }
   </style>
 </head>
-<body class="min-h-screen flex flex-col relative">
+<body class="min-h-screen flex flex-col relative bg-white text-neutral-900">
 
   <!-- Main Library View -->
   <div id="libraryPage" class="flex-1 flex flex-col">
     <!-- Header Navigation -->
-    <header class="bg-[#3c2a21] text-[#f5efe6] px-6 py-4 shadow-md flex justify-between items-center border-b-4 border-[#8c6747]">
+    <header class="bg-black text-white px-6 py-4 shadow-sm flex justify-between items-center border-b border-neutral-800">
       <div class="flex items-center space-x-3">
-        <span class="text-2xl">📖</span>
-        <h1 class="text-xl md:text-2xl font-bold tracking-wide">Family Songbooks</h1>
+        <h1 class="text-lg md:text-xl font-bold tracking-tight">Family Songbooks</h1>
       </div>
       <div class="flex items-center space-x-3">
-        <button onclick="openAddModal()" class="bg-[#8c6747] hover:bg-[#a37954] text-white px-3 py-1.5 rounded text-sm font-sans flex items-center gap-1 transition cursor-pointer">
-          <span>+</span> Add Song
+        <button onclick="openAddModal()" class="bg-white text-black hover:bg-neutral-200 px-3.5 py-1.5 rounded-md text-sm font-medium transition cursor-pointer">
+          + Add Song
         </button>
-        <button onclick="openModal('settingsModal')" title="Firebase Settings" class="p-2 hover:bg-[#523a2e] rounded-full transition text-lg cursor-pointer">
+        <button onclick="openModal('settingsModal')" title="Firebase Settings" class="p-2 hover:bg-neutral-800 rounded-full transition text-base cursor-pointer">
           ⚙️
         </button>
       </div>
     </header>
 
     <!-- Main Content Area -->
-    <main class="flex-1 max-w-4xl w-full mx-auto p-4 md:p-6">
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-        <h2 class="text-xl font-semibold text-[#3c2a21]">Song Archive (A-Z)</h2>
-        
-        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
-          <!-- Search Input Field -->
-          <div class="relative flex-1 sm:w-64">
-            <input 
-              type="text" 
-              id="searchInput" 
-              oninput="handleSearch()" 
-              placeholder="Search by title or key..." 
-              class="w-full px-3 py-1.5 pl-8 border border-amber-900/20 rounded bg-white font-sans text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-[#8c6747]"
-            >
-            <span class="absolute left-2.5 top-2 text-xs text-gray-400">🔍</span>
-          </div>
+    <main class="flex-1 max-w-3xl w-full mx-auto p-4 md:p-6">
+      
+      <!-- Centered Search Bar -->
+      <div class="w-full my-4">
+        <input 
+          type="text" 
+          id="searchInput" 
+          oninput="handleSearch()" 
+          placeholder="Search songs by title or key..." 
+          class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg bg-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-black"
+        >
+      </div>
 
-          <!-- Connection Status Light -->
-          <div class="flex items-center gap-2 self-end sm:self-center">
-            <span id="syncStatus" class="inline-block w-2.5 h-2.5 rounded-full bg-gray-400"></span>
-            <span id="syncText" class="text-xs font-sans text-gray-600">Local Only</span>
-          </div>
+      <div class="flex justify-between items-center mt-6 mb-4">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-neutral-500">Song Library (A-Z)</h2>
+        <div class="flex items-center gap-2">
+          <span id="syncStatus" class="inline-block w-2 h-2 rounded-full bg-neutral-400"></span>
+          <span id="syncText" class="text-xs text-neutral-500 font-medium">Local Only</span>
         </div>
       </div>
       
       <!-- Songbase Alphabetical List Container -->
       <div id="songList" class="space-y-2">
-        <div class="parchment p-6 rounded-lg text-center text-gray-600">
+        <div class="song-card p-6 rounded-lg text-center text-neutral-500 text-sm">
           No songs added yet. Click "+ Add Song" to begin archiving!
         </div>
       </div>
     </main>
   </div>
 
-  <!-- Dedicated Full-Screen Songbase Reader Page -->
-  <div id="readerPage" class="fixed inset-0 bg-[#fcf8f2] hidden flex-col z-50 overflow-y-auto">
+  <!-- Dedicated Full-Screen Reader Page -->
+  <div id="readerPage" class="fixed inset-0 bg-white hidden flex-col z-50 overflow-y-auto">
     <!-- Reader Top Bar -->
-    <header class="bg-[#3c2a21] text-[#f5efe6] px-6 py-4 shadow-md flex justify-between items-center border-b-4 border-[#8c6747] sticky top-0 z-10">
-      <button onclick="closeReader()" class="bg-[#8c6747] hover:bg-[#a37954] text-white px-3 py-1.5 rounded text-sm font-sans flex items-center gap-2 transition cursor-pointer">
-        <span>←</span> All Songs
+    <header class="bg-black text-white px-6 py-4 shadow-sm flex justify-between items-center border-b border-neutral-800 sticky top-0 z-10">
+      <button onclick="closeReader()" class="bg-neutral-800 hover:bg-neutral-700 text-white px-3 py-1.5 rounded-md text-sm font-medium transition cursor-pointer">
+        ← All Songs
       </button>
       
       <!-- Small Edit & Delete Action Buttons -->
-      <div class="flex items-center gap-2 font-sans">
-        <button onclick="openEditSong()" class="text-xs bg-[#523a2e] hover:bg-[#684b3e] text-amber-100 px-2.5 py-1 rounded transition border border-amber-900/30 cursor-pointer">
+      <div class="flex items-center gap-2">
+        <button onclick="openEditSong()" class="text-xs bg-neutral-800 hover:bg-neutral-700 text-white px-3 py-1.5 rounded-md transition border border-neutral-700 cursor-pointer font-medium">
           Edit
         </button>
-        <button onclick="deleteCurrentSong()" class="text-xs bg-red-950/40 hover:bg-red-900/65 text-red-200 px-2.5 py-1 rounded transition border border-red-900/30 cursor-pointer">
+        <button onclick="deleteCurrentSong()" class="text-xs bg-red-950 hover:bg-red-900 text-red-200 px-3 py-1.5 rounded-md transition border border-red-900 cursor-pointer font-medium">
           Delete
         </button>
       </div>
     </header>
 
     <!-- Full Screen Song Content Area -->
-    <main class="max-w-3xl w-full mx-auto p-6 md:p-10 flex-1 flex flex-col">
-      <div class="parchment p-6 md:p-10 rounded-lg shadow-md border border-[#e2d5c3] flex-1 flex flex-col">
-        <div class="border-b border-[#e2d5c3] pb-4 mb-6 flex justify-between items-baseline">
+    <main class="max-w-2xl w-full mx-auto p-6 md:p-10 flex-1 flex flex-col">
+      <div class="bg-neutral-50 p-6 md:p-10 rounded-lg shadow-sm border border-neutral-200 flex-1 flex flex-col">
+        <div class="border-b border-neutral-200 pb-4 mb-6 flex justify-between items-baseline">
           <div>
-            <h2 id="viewSongTitle" class="text-3xl md:text-4xl font-bold text-[#3c2a21]"></h2>
-            <p id="viewSongKey" class="text-base font-sans text-[#8c6747] font-semibold mt-2"></p>
+            <h2 id="viewSongTitle" class="text-2xl md:text-3xl font-bold text-neutral-900 tracking-tight"></h2>
+            <p id="viewSongKey" class="text-sm font-medium text-neutral-500 mt-1"></p>
           </div>
         </div>
 
-        <div class="flex-1 bg-white/80 p-6 rounded-lg border border-amber-900/10">
-          <pre id="viewSongLyrics" class="whitespace-pre-wrap font-mono text-sm md:text-lg text-gray-800 leading-relaxed"></pre>
+        <div class="flex-1 bg-white p-6 rounded-lg border border-neutral-200 shadow-inner">
+          <pre id="viewSongLyrics" class="whitespace-pre-wrap font-mono text-sm md:text-base text-neutral-800 leading-relaxed"></pre>
         </div>
       </div>
     </main>
   </div>
 
   <!-- Add / Edit Song Modal -->
-  <div id="addSongModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center p-4 z-40">
-    <div class="parchment w-full max-w-lg rounded-lg shadow-xl p-6 relative">
-      <h3 id="modalHeading" class="text-xl font-bold text-[#3c2a21] mb-4">Add New Song</h3>
-      <div class="space-y-4 font-sans text-sm">
+  <div id="addSongModal" class="fixed inset-0 bg-black/50 backdrop-blur-xs hidden items-center justify-center p-4 z-40">
+    <div class="bg-white w-full max-w-lg rounded-xl shadow-xl p-6 border border-neutral-200 relative">
+      <h3 id="modalHeading" class="text-lg font-bold text-neutral-900 mb-4">Add New Song</h3>
+      <div class="space-y-4 text-sm">
         <input type="hidden" id="editingSongId">
         <div>
-          <label class="block font-semibold mb-1">Song Title</label>
-          <input type="text" id="songTitle" class="w-full p-2 border border-amber-900/20 rounded bg-white" placeholder="Amazing Grace">
+          <label class="block font-medium text-neutral-700 mb-1">Song Title</label>
+          <input type="text" id="songTitle" class="w-full px-3 py-2 border border-neutral-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-black" placeholder="Amazing Grace">
         </div>
         <div>
-          <label class="block font-semibold mb-1">Key / Artist</label>
-          <input type="text" id="songKey" class="w-full p-2 border border-amber-900/20 rounded bg-white" placeholder="Key of G / Traditional">
+          <label class="block font-medium text-neutral-700 mb-1">Key / Artist</label>
+          <input type="text" id="songKey" class="w-full px-3 py-2 border border-neutral-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-black" placeholder="Key of G / Traditional">
         </div>
         <div>
-          <label class="block font-semibold mb-1">Chords & Lyrics</label>
-          <textarea id="songLyrics" rows="6" class="w-full p-2 border border-amber-900/20 rounded bg-white font-mono text-xs" placeholder="[G] Amazing grace, how [C] sweet the [G] sound..."></textarea>
+          <label class="block font-medium text-neutral-700 mb-1">Chords & Lyrics</label>
+          <textarea id="songLyrics" rows="7" class="w-full px-3 py-2 border border-neutral-300 rounded-lg bg-white font-mono text-xs focus:outline-none focus:ring-2 focus:ring-black" placeholder="[G] Amazing grace, how [C] sweet the [G] sound..."></textarea>
         </div>
       </div>
-      <div class="mt-6 flex justify-end gap-3 font-sans text-sm">
-        <button onclick="closeModal('addSongModal')" class="px-4 py-2 border border-gray-400 rounded cursor-pointer">Cancel</button>
-        <button onclick="saveSong()" class="px-4 py-2 bg-[#3c2a21] text-white rounded hover:bg-[#523a2e] cursor-pointer">Save Song</button>
+      <div class="mt-6 flex justify-end gap-3 text-sm">
+        <button onclick="closeModal('addSongModal')" class="px-4 py-2 border border-neutral-300 rounded-lg text-neutral-700 hover:bg-neutral-100 cursor-pointer font-medium">Cancel</button>
+        <button onclick="saveSong()" class="px-4 py-2 bg-black text-white rounded-lg hover:bg-neutral-800 cursor-pointer font-medium">Save Song</button>
       </div>
     </div>
   </div>
 
   <!-- Firebase Settings Modal -->
-  <div id="settingsModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
-    <div class="parchment w-full max-w-md rounded-lg shadow-xl p-6 relative">
-      <h3 class="text-xl font-bold text-[#3c2a21] mb-2">Firebase Cloud Setup</h3>
-      <p class="text-xs font-sans text-gray-600 mb-4">Paste your free Firebase web keys below to sync songs across devices.</p>
+  <div id="settingsModal" class="fixed inset-0 bg-black/50 backdrop-blur-xs hidden items-center justify-center p-4 z-50">
+    <div class="bg-white w-full max-w-md rounded-xl shadow-xl p-6 border border-neutral-200 relative">
+      <h3 class="text-lg font-bold text-neutral-900 mb-1">Firebase Cloud Setup</h3>
+      <p class="text-xs text-neutral-500 mb-4">Paste your free Firebase web keys below to sync songs across devices.</p>
       
-      <div class="space-y-3 font-sans text-xs">
+      <div class="space-y-2.5 text-xs">
         <div>
-          <label class="block font-semibold">apiKey</label>
-          <input type="text" id="apiKey" class="w-full p-1.5 border rounded bg-white font-mono">
+          <label class="block font-medium text-neutral-700 mb-0.5">apiKey</label>
+          <input type="text" id="apiKey" class="w-full px-2.5 py-1.5 border border-neutral-300 rounded bg-white font-mono">
         </div>
         <div>
-          <label class="block font-semibold">authDomain</label>
-          <input type="text" id="authDomain" class="w-full p-1.5 border rounded bg-white font-mono">
+          <label class="block font-medium text-neutral-700 mb-0.5">authDomain</label>
+          <input type="text" id="authDomain" class="w-full px-2.5 py-1.5 border border-neutral-300 rounded bg-white font-mono">
         </div>
         <div>
-          <label class="block font-semibold">projectId</label>
-          <input type="text" id="projectId" class="w-full p-1.5 border rounded bg-white font-mono">
+          <label class="block font-medium text-neutral-700 mb-0.5">projectId</label>
+          <input type="text" id="projectId" class="w-full px-2.5 py-1.5 border border-neutral-300 rounded bg-white font-mono">
         </div>
         <div>
-          <label class="block font-semibold">storageBucket</label>
-          <input type="text" id="storageBucket" class="w-full p-1.5 border rounded bg-white font-mono">
+          <label class="block font-medium text-neutral-700 mb-0.5">storageBucket</label>
+          <input type="text" id="storageBucket" class="w-full px-2.5 py-1.5 border border-neutral-300 rounded bg-white font-mono">
         </div>
         <div>
-          <label class="block font-semibold">messagingSenderId</label>
-          <input type="text" id="messagingSenderId" class="w-full p-1.5 border rounded bg-white font-mono">
+          <label class="block font-medium text-neutral-700 mb-0.5">messagingSenderId</label>
+          <input type="text" id="messagingSenderId" class="w-full px-2.5 py-1.5 border border-neutral-300 rounded bg-white font-mono">
         </div>
         <div>
-          <label class="block font-semibold">appId</label>
-          <input type="text" id="appId" class="w-full p-1.5 border rounded bg-white font-mono">
+          <label class="block font-medium text-neutral-700 mb-0.5">appId</label>
+          <input type="text" id="appId" class="w-full px-2.5 py-1.5 border border-neutral-300 rounded bg-white font-mono">
         </div>
       </div>
 
-      <div class="mt-6 flex justify-end gap-3 font-sans text-sm">
-        <button onclick="closeModal('settingsModal')" class="px-4 py-2 border border-gray-400 rounded cursor-pointer">Cancel</button>
-        <button onclick="saveConfig()" class="px-4 py-2 bg-[#3c2a21] text-white rounded hover:bg-[#523a2e] cursor-pointer">Save Configuration</button>
+      <div class="mt-6 flex justify-end gap-3 text-sm">
+        <button onclick="closeModal('settingsModal')" class="px-4 py-2 border border-neutral-300 rounded-lg text-neutral-700 hover:bg-neutral-100 cursor-pointer font-medium">Cancel</button>
+        <button onclick="saveConfig()" class="px-4 py-2 bg-black text-white rounded-lg hover:bg-neutral-800 cursor-pointer font-medium">Save Configuration</button>
       </div>
     </div>
   </div>
@@ -207,12 +212,12 @@
         try {
           if (!firebase.apps.length) firebase.initializeApp(cfg);
           db = firebase.firestore();
-          document.getElementById('syncStatus').className = 'inline-block w-2.5 h-2.5 rounded-full bg-green-500';
+          document.getElementById('syncStatus').className = 'inline-block w-2 h-2 rounded-full bg-emerald-500';
           document.getElementById('syncText').innerText = 'Cloud Synced';
           loadCloudSongs();
         } catch(e) {
           console.error("Firebase Init Error:", e);
-          document.getElementById('syncStatus').className = 'inline-block w-2.5 h-2.5 rounded-full bg-red-500';
+          document.getElementById('syncStatus').className = 'inline-block w-2 h-2 rounded-full bg-red-500';
           document.getElementById('syncText').innerText = 'Connection Error';
         }
       }
@@ -243,17 +248,17 @@
       sortSongsAlphabetically(songsToRender);
 
       if (!songsToRender.length) {
-        container.innerHTML = `<div class="parchment p-6 rounded-lg text-center text-gray-600">No songs found.</div>`;
+        container.innerHTML = `<div class="song-card p-6 rounded-lg text-center text-neutral-500 text-sm">No songs found.</div>`;
         return;
       }
 
       container.innerHTML = songsToRender.map(s => `
-        <div onclick="openReader('${s.id}')" class="parchment px-5 py-3 rounded-lg shadow-sm border border-[#e2d5c3] cursor-pointer hover:bg-[#eae2d5] transition flex justify-between items-center group">
+        <div onclick="openReader('${s.id}')" class="song-card px-5 py-3.5 rounded-lg cursor-pointer flex justify-between items-center group">
           <div class="flex items-center gap-4">
-            <span class="text-sm font-bold text-[#8c6747] w-16">${s.key || 'Key'}</span>
-            <h3 class="font-bold text-base md:text-lg text-[#3c2a21] group-hover:text-[#8c6747] transition">${s.title}</h3>
+            <span class="text-xs font-mono font-semibold text-neutral-500 w-16 uppercase">${s.key || 'Key'}</span>
+            <h3 class="font-semibold text-base text-neutral-900 group-hover:text-black transition">${s.title}</h3>
           </div>
-          <span class="text-xs font-sans text-gray-400 group-hover:text-gray-600">View →</span>
+          <span class="text-xs text-neutral-400 group-hover:text-neutral-700 font-medium">View →</span>
         </div>
       `).join('');
     }
