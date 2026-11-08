@@ -43,7 +43,6 @@
     </div>
     
     <div id="songList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <!-- Songs render here -->
       <div class="parchment p-6 rounded-lg text-center text-gray-600 col-span-full">
         No songs added yet. Click "+ Add Song" to begin archiving!
       </div>
@@ -84,27 +83,27 @@
       <div class="space-y-3 font-sans text-xs">
         <div>
           <label class="block font-semibold">apiKey</label>
-          <input type="text" id="#apiKey" class="w-full p-1.5 border rounded bg-white font-mono">
+          <input type="text" id="apiKey" class="w-full p-1.5 border rounded bg-white font-mono">
         </div>
         <div>
           <label class="block font-semibold">authDomain</label>
-          <input type="text" id="#authDomain" class="w-full p-1.5 border rounded bg-white font-mono">
+          <input type="text" id="authDomain" class="w-full p-1.5 border rounded bg-white font-mono">
         </div>
         <div>
           <label class="block font-semibold">projectId</label>
-          <input type="text" id="#projectId" class="w-full p-1.5 border rounded bg-white font-mono">
+          <input type="text" id="projectId" class="w-full p-1.5 border rounded bg-white font-mono">
         </div>
         <div>
           <label class="block font-semibold">storageBucket</label>
-          <input type="text" id="#storageBucket" class="w-full p-1.5 border rounded bg-white font-mono">
+          <input type="text" id="storageBucket" class="w-full p-1.5 border rounded bg-white font-mono">
         </div>
         <div>
           <label class="block font-semibold">messagingSenderId</label>
-          <input type="text" id="#messagingSenderId" class="w-full p-1.5 border rounded bg-white font-mono">
+          <input type="text" id="messagingSenderId" class="w-full p-1.5 border rounded bg-white font-mono">
         </div>
         <div>
           <label class="block font-semibold">appId</label>
-          <input type="text" id="#appId" class="w-full p-1.5 border rounded bg-white font-mono">
+          <input type="text" id="appId" class="w-full p-1.5 border rounded bg-white font-mono">
         </div>
       </div>
 
@@ -119,8 +118,17 @@
     let db = null;
     let songs = JSON.parse(localStorage.getItem('fs_songs') || '[]');
 
-    function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
-    function closeModal(id) { document.getElementById(id).classList.addClass('hidden'); document.getElementById(id).classList.remove('flex'); }
+    function openModal(id) {
+      const el = document.getElementById(id);
+      el.classList.remove('hidden');
+      el.classList.add('flex');
+    }
+
+    function closeModal(id) {
+      const el = document.getElementById(id);
+      el.classList.add('hidden');
+      el.classList.remove('flex');
+    }
 
     function initFirebase() {
       const cfg = JSON.parse(localStorage.getItem('fs_firebase_cfg') || '{}');
@@ -131,18 +139,22 @@
           document.getElementById('syncStatus').className = 'inline-block w-2.5 h-2.5 rounded-full bg-green-500';
           document.getElementById('syncText').innerText = 'Cloud Synced';
           loadCloudSongs();
-        } catch(e) { console.error(e); }
+        } catch(e) {
+          console.error(e);
+          document.getElementById('syncStatus').className = 'inline-block w-2.5 h-2.5 rounded-full bg-red-500';
+          document.getElementById('syncText').innerText = 'Connection Error';
+        }
       }
     }
 
     function saveConfig() {
       const cfg = {
-        apiKey: document.getElementById('#apiKey').value.trim(),
-        authDomain: document.getElementById('#authDomain').value.trim(),
-        projectId: document.getElementById('#projectId').value.trim(),
-        storageBucket: document.getElementById('#storageBucket').value.trim(),
-        messagingSenderId: document.getElementById('#messagingSenderId').value.trim(),
-        appId: document.getElementById('#appId').value.trim()
+        apiKey: document.getElementById('apiKey').value.trim(),
+        authDomain: document.getElementById('authDomain').value.trim(),
+        projectId: document.getElementById('projectId').value.trim(),
+        storageBucket: document.getElementById('storageBucket').value.trim(),
+        messagingSenderId: document.getElementById('messagingSenderId').value.trim(),
+        appId: document.getElementById('appId').value.trim()
       };
       localStorage.setItem('fs_firebase_cfg', JSON.stringify(cfg));
       closeModal('settingsModal');
@@ -197,10 +209,12 @@
       });
     }
 
-    // Auto-fill existing settings if saved
+    // Populate input fields if configuration exists in localStorage
     const savedCfg = JSON.parse(localStorage.getItem('fs_firebase_cfg') || '{}');
     ['apiKey','authDomain','projectId','storageBucket','messagingSenderId','appId'].forEach(k => {
-      if (savedCfg[k]) document.getElementById('#'+k).value = savedCfg[k];
+      if (savedCfg[k] && document.getElementById(k)) {
+        document.getElementById(k).value = savedCfg[k];
+      }
     });
 
     renderSongs();
